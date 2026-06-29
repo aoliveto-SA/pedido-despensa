@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pedido a Despensa — Sanatorio Allende Cerro</title>
+<style>
+:root{
+  --verde:#16a34a;--verde-claro:#dcfce7;--verde-txt:#166534;
+  --azul:#2563eb;--azul-claro:#dbeafe;--azul-txt:#1e40af;
+  --rojo:#dc2626;--amarillo:#fef9c3;--amarillo-txt:#854d0e;
+  --borde:#e5e7eb;--fondo:#f9fafb;--blanco:#fff;--gris:#6b7280;
+  --texto:#111827;--radio:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,sans-serif;font-size:13px;color:var(--texto);background:#f3f4f6;min-height:100vh}
+.header{background:var(--verde);color:#fff;padding:14px 20px;display:flex;align-items:center;gap:10px}
+.header h1{font-size:16px;font-weight:600}
+.header p{font-size:12px;opacity:.8;margin-top:2px}
+.container{max-width:960px;margin:0 auto;padding:16px}
+/* Tabs */
+.tabs{display:flex;gap:0;background:var(--blanco);border-radius:var(--radio);overflow:hidden;border:1px solid var(--borde);margin-bottom:16px}
+.tab{flex:1;padding:10px 8px;cursor:pointer;border:none;background:none;color:var(--gris);font-size:12px;font-family:inherit;font-weight:500;border-bottom:2px solid transparent;transition:.15s}
+.tab.on{color:var(--azul);border-bottom-color:var(--azul);background:var(--azul-claro)}
+.sec{display:none}.sec.on{display:block}
+/* Cards */
+.card{background:var(--blanco);border:1px solid var(--borde);border-radius:var(--radio);padding:16px;margin-bottom:12px}
+.card-title{font-size:13px;font-weight:600;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center}
+/* Macro panel */
+.macro-card{background:linear-gradient(135deg,#eff6ff,#f0fdf4);border:1px solid #bfdbfe;border-radius:var(--radio);padding:16px;margin-bottom:12px}
+.macro-card .card-title{color:var(--azul-txt)}
+.macro-preview{margin-top:8px;background:var(--blanco);border:1px solid #bfdbfe;border-radius:6px;max-height:180px;overflow-y:auto}
+.mi{display:flex;align-items:center;gap:6px;padding:6px 10px;border-bottom:1px solid #f0f9ff;font-size:12px}
+.mi:last-child{border-bottom:none}
+/* Forms */
+.form-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:flex-end}
+.form-col{display:flex;flex-direction:column;gap:3px}
+.form-col.grow{flex:1}
+label{font-size:11px;color:var(--gris);text-transform:uppercase;letter-spacing:.04em;font-weight:500}
+select,input[type=text],input[type=number]{padding:7px 9px;font-size:13px;border:1px solid var(--borde);border-radius:6px;background:var(--blanco);color:var(--texto);font-family:inherit;width:100%}
+select:focus,input:focus{outline:2px solid var(--azul);border-color:transparent}
+/* Buttons */
+.btn{padding:7px 14px;font-size:13px;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:500;border:none;transition:.15s}
+.btn-a{background:var(--azul);color:#fff}.btn-a:hover{background:#1d4ed8}
+.btn-g{background:var(--verde);color:#fff}.btn-g:hover{background:#15803d}
+.btn-s{background:none;border:1px solid var(--borde);color:var(--texto)}.btn-s:hover{background:var(--fondo)}
+.btn-w{width:100%;padding:10px;font-size:14px;background:var(--azul);color:#fff;border:none;border-radius:var(--radio);cursor:pointer;font-weight:600;margin-top:8px}
+/* Pills */
+.pill{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:500;white-space:nowrap}
+.pill-pp{background:var(--azul-claro);color:var(--azul-txt)}
+.pill-gu{background:var(--verde-claro);color:var(--verde-txt)}
+.pill-en{background:var(--amarillo);color:var(--amarillo-txt)}
+.pill-so{background:#ede9fe;color:#5b21b6}
+.pill-po{background:#fce7f3;color:#9d174d}
+.pill-ot{background:var(--fondo);color:var(--gris)}
+.dtag{font-size:11px;padding:2px 8px;border-radius:10px;background:var(--azul-claro);color:var(--azul-txt);font-weight:500;white-space:nowrap}
+/* Item list */
+.ilist{border:1px solid var(--borde);border-radius:var(--radio);overflow:hidden;margin-bottom:10px}
+.irow{display:grid;gap:8px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--borde)}
+.irow:last-child{border-bottom:none}.irow:hover{background:var(--fondo)}
+.porinp{width:58px;padding:5px 6px;font-size:12px;text-align:center;border:1px solid var(--borde);border-radius:4px;background:var(--blanco)}
+.del{background:none;border:none;cursor:pointer;color:#ccc;font-size:18px;line-height:1;padding:2px 4px}.del:hover{color:var(--rojo)}
+.empty{color:var(--gris);text-align:center;padding:24px;font-size:13px;background:var(--blanco);border:1px dashed var(--borde);border-radius:var(--radio)}
+/* Search dropdown */
+.srch{position:relative}
+.drop{position:absolute;top:100%;left:0;right:0;background:var(--blanco);border:1px solid var(--borde);border-radius:var(--radio);z-index:200;max-height:200px;overflow-y:auto;display:none;box-shadow:0 8px 24px rgba(0,0,0,.1)}
+.drop.vis{display:block}
+.dopt{padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--borde);font-size:13px}
+.dopt:last-child{border-bottom:none}.dopt:hover{background:var(--fondo)}
+.dopt small{color:var(--gris);font-size:11px;margin-left:4px}
+/* Chips */
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.chip{font-size:12px;padding:4px 12px;border-radius:12px;cursor:pointer;border:1px solid var(--borde);background:none;color:var(--gris);font-family:inherit;font-weight:500}
+.chip.on{background:var(--azul-claro);color:var(--azul-txt);border-color:#93c5fd}
+/* Table */
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{font-size:11px;color:var(--gris);text-align:left;padding:8px 10px;border-bottom:1px solid var(--borde);text-transform:uppercase;letter-spacing:.04em;font-weight:600;background:var(--fondo)}
+td{padding:8px 10px;border-bottom:1px solid var(--borde)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--fondo)}
+.num{text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+.num-dim{text-align:right;color:var(--gris);font-size:12px}
+.badge{font-size:11px;padding:2px 8px;border-radius:10px}
+.b-g{background:var(--verde-claro);color:var(--verde-txt)}
+.b-ml{background:var(--azul-claro);color:var(--azul-txt)}
+.b-u{background:var(--amarillo);color:var(--amarillo-txt)}
+.b-o{background:var(--fondo);color:var(--gris)}
+/* Summary cards */
+.sums{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.scard{background:var(--blanco);border:1px solid var(--borde);border-radius:var(--radio);padding:12px 16px;flex:1;min-width:80px;text-align:center}
+.scard strong{display:block;font-size:24px;font-weight:700;color:var(--azul)}
+.scard span{font-size:11px;color:var(--gris);font-weight:500;text-transform:uppercase;letter-spacing:.04em}
+/* Notif */
+.notif{border-radius:var(--radio);padding:10px 14px;font-size:12px;margin-bottom:10px;display:none;font-weight:500}
+.notif.show{display:block}
+/* Plantilla */
+.plantilla-card{background:var(--blanco);border:1px solid var(--borde);border-radius:var(--radio);padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:10px}
+.pc-name{flex:1}
+.pc-name strong{font-size:13px;font-weight:600;display:block}
+.pc-name small{font-size:11px;color:var(--gris)}
+/* Prov badge */
+.prov-badge{font-size:10px;padding:1px 7px;border-radius:8px;background:#fef3c7;color:#92400e;margin-left:6px;font-weight:500}
+.prov-badge.p{background:#fee2e2;color:#991b1b}
+/* Dia section */
+.dia-sec{margin-bottom:20px}
+.dia-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--gris);padding:6px 0;margin-bottom:8px;border-bottom:2px solid var(--borde)}
+.section-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+</style>
+</head>
+<body>
+<div class="header">
+  <div>
+    <h1>🏥 Pedido a Despensa</h1>
+    <p>Sanatorio Allende Cerro — Sistema de gestión de pedidos</p>
+  </div>
+</div>
+
+<div class="container">
+<div class="tabs">
+  <button class="tab on" onclick="goTab('menu')">1 · Menú</button>
+  <button class="tab" onclick="goTab('plantillas')">2 · Plantillas</button>
+  <button class="tab" onclick="goTab('pedido')">3 · Pedido</button>
+  <button class="tab" onclick="goTab('proveedores')">4 · Proveedores</button>
+  <button class="tab" onclick="goTab('mermas')">5 · Mermas</button>
+</div>
+
+<!-- ═══ TAB 1: MENU ═══ -->
+<div id="tab-menu" class="sec on">
+
+  <div class="macro-card">
+    <div class="card-title">⚡ Cargar desde cuadro macro</div>
+    <div class="form-row">
+      <div class="form-col"><label>Día</label>
+        <select id="mDia" style="width:110px" onchange="previewMacro()">
+          <option>Lunes</option><option>Martes</option><option>Miércoles</option>
+          <option>Jueves</option><option>Viernes</option><option>Sábado</option><option>Domingo</option>
+        </select>
+      </div>
+      <div class="form-col"><label>Servicio</label>
+        <select id="mSrv" style="width:105px" onchange="previewMacro()">
+          <option>Almuerzo</option><option>Cena</option>
+        </select>
+      </div>
+      <div class="form-col"><label>Dieta</label>
+        <select id="mDieta" style="width:130px" onchange="previewMacro()">
+          <option value="g">General</option><option value="l">Liviano</option>
+          <option value="lc">Liv. c/carne</option><option value="n">Niño</option>
+          <option value="a">Adolescente</option><option value="b1">Bebé 1</option>
+          <option value="b2">Bebé 2</option><option value="dbt">DBT</option>
+          <option value="bcb">BCB</option><option value="veg">Vegetariano</option>
+          <option value="cel">Celíaco</option><option value="ast">Astringente</option>
+          <option value="sl">Súper liviano</option><option value="ids4">IDSSI 4</option>
+          <option value="ids5">IDSSI 5</option><option value="ids6">IDSSI 6</option>
+          <option value="ids7">IDSSI 7</option><option value="exc">Excepción</option>
+        </select>
+      </div>
+      <div class="form-col"><label>Porciones</label>
+        <input type="number" id="mPor" value="30" min="1" style="width:70px">
+      </div>
+      <button class="btn btn-g" onclick="cargarDesdeMacro()" style="align-self:flex-end">↓ Cargar</button>
+    </div>
+    <div id="macro-preview" class="macro-preview" style="display:none"></div>
+  </div>
+
+  <div id="notif" class="notif"></div>
+
+  <div class="card">
+    <div class="card-title">
+      🍽 Agregar combo manual
+      <button class="btn btn-s" style="font-size:11px;padding:3px 8px" onclick="limpiarCombo()">Limpiar</button>
+    </div>
+    <div class="form-row">
+      <div class="form-col"><label>Día</label>
+        <select id="cDia" style="width:110px"><option>Lunes</option><option>Martes</option><option>Miércoles</option><option>Jueves</option><option>Viernes</option><option>Sábado</option><option>Domingo</option></select>
+      </div>
+      <div class="form-col"><label>Servicio</label>
+        <select id="cSrv" style="width:105px"><option>Almuerzo</option><option>Cena</option></select>
+      </div>
+      <div class="form-col"><label>Dieta</label>
+        <select id="cDieta" style="width:130px">
+          <option value="g">General</option><option value="l">Liviano</option>
+          <option value="lc">Liv. c/carne</option><option value="n">Niño</option>
+          <option value="a">Adolescente</option><option value="b1">Bebé 1</option>
+          <option value="b2">Bebé 2</option><option value="dbt">DBT</option>
+          <option value="bcb">BCB</option><option value="veg">Vegetariano</option>
+          <option value="cel">Celíaco</option><option value="ast">Astringente</option>
+          <option value="sl">Súper liviano</option><option value="ids4">IDSSI 4</option>
+          <option value="ids5">IDSSI 5</option><option value="ids6">IDSSI 6</option>
+          <option value="ids7">IDSSI 7</option><option value="exc">Excepción</option>
+        </select>
+      </div>
+      <div class="form-col"><label>Porciones</label>
+        <input type="number" id="cPor" value="30" min="1" style="width:70px">
+      </div>
+    </div>
+    <div class="form-row" style="margin-bottom:8px">
+      <div class="form-col grow">
+        <div class="srch">
+          <input type="text" id="cRec" placeholder="Buscar receta para el combo..." autocomplete="off"
+            oninput="filtrarC()" onfocus="filtrarC()" onblur="setTimeout(()=>closeDrop('cdrop'),200)">
+          <div id="cdrop" class="drop"></div>
+        </div>
+      </div>
+      <button class="btn btn-s" onclick="addRecetaAlCombo()" style="align-self:flex-end">+ Agregar</button>
+    </div>
+    <div id="combo-recetas-actual" style="margin-bottom:10px">
+      <div style="font-size:12px;color:var(--gris);font-style:italic;padding:6px 0">Sin recetas en el combo</div>
+    </div>
+    <div class="form-row" style="margin-bottom:0">
+      <button class="btn btn-a" style="flex:1" onclick="confirmarCombo()">✓ Confirmar combo</button>
+      <button class="btn btn-s" style="flex:1" onclick="guardarPlantilla()">☆ Guardar como plantilla</button>
+    </div>
+  </div>
+
+  <div id="lista"><div class="empty">Cargá platos desde el macro o armá un combo manual</div></div>
+  <button class="btn btn-w" onclick="goTab('pedido')">Ver pedido consolidado ↗</button>
+</div>
+
+<!-- ═══ TAB 2: PLANTILLAS ═══ -->
+<div id="tab-plantillas" class="sec">
+  <div class="section-hdr">
+    <div>
+      <h2 style="font-size:15px;font-weight:600">Plantillas guardadas</h2>
+      <p style="font-size:12px;color:var(--gris);margin-top:2px">Guardá combos frecuentes y usalos cualquier semana</p>
+    </div>
+    <button class="btn btn-s" style="font-size:12px" onclick="limpiarTodasPlantillas()">Borrar todas</button>
+  </div>
+  <div id="plantillas-lista"><div class="empty">Sin plantillas aún — armá un combo y guardalo desde el Menú</div></div>
+</div>
+
+<!-- ═══ TAB 3: PEDIDO ═══ -->
+<div id="tab-pedido" class="sec">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px;flex-wrap:wrap">
+    <div class="sums" id="sumCards" style="flex:1;margin:0"></div>
+    <div style="display:flex;gap:6px">
+      <button class="btn btn-s" onclick="exportCSV()">↓ CSV</button>
+      <button class="btn btn-s" id="btnCopiar" onclick="copiar()">⎘ Copiar</button>
+    </div>
+  </div>
+  <div class="chips" id="vistaChips">
+    <button class="chip on" data-v="consolidado" onclick="setVista(this)">Consolidado</button>
+    <button class="chip" data-v="pordia" onclick="setVista(this)">Por día</button>
+  </div>
+  <div class="chips" id="filtroU">
+    <button class="chip on" data-u="todo" onclick="setFiltro(this)">Todos</button>
+    <button class="chip" data-u="g" onclick="setFiltro(this)">Gramos</button>
+    <button class="chip" data-u="ml" onclick="setFiltro(this)">ml / cc</button>
+    <button class="chip" data-u="u" onclick="setFiltro(this)">Unidades</button>
+    <button class="chip" data-u="o" onclick="setFiltro(this)">Otros</button>
+  </div>
+  <div id="resultado"><div class="empty">Armá el menú en el paso 1</div></div>
+</div>
+
+<!-- ═══ TAB 4: PROVEEDORES ═══ -->
+<div id="tab-proveedores" class="sec">
+  <div class="card">
+    <div class="card-title">Agregar proveedor</div>
+    <div class="form-row">
+      <div class="form-col grow"><label>Nombre</label><input type="text" id="pNombre" placeholder="Ej: Frigorífico Norte"></div>
+      <div class="form-col grow"><label>Palabras clave (separadas por coma)</label><input type="text" id="pGrupo" placeholder="Ej: lomo, bife, nalga, peceto"></div>
+      <div class="form-col"><label>Días entrega</label><input type="text" id="pDias" placeholder="lun, mié, vie" style="width:120px"></div>
+      <div class="form-col"><label>Perecedero</label>
+        <select id="pPerec" style="width:90px"><option value="si">Sí</option><option value="no">No</option></select>
+      </div>
+      <button class="btn btn-a" onclick="addProv()" style="align-self:flex-end">+ Agregar</button>
+    </div>
+  </div>
+  <div id="provList"><div class="empty">Sin proveedores</div></div>
+  <div class="card" style="margin-top:12px">
+    <div class="card-title">Cronograma de pedidos</div>
+    <div id="cronograma"><div class="empty">Cargá proveedores y armá el menú</div></div>
+  </div>
+</div>
+
+<!-- ═══ TAB 5: MERMAS ═══ -->
+<div id="tab-mermas" class="sec">
+  <div class="card">
+    <div class="card-title">Merma por ingrediente</div>
+    <p style="font-size:12px;color:var(--gris);margin-bottom:12px">El pedido final = cantidad receta × (1 + merma%). Se aplica a todos los platos que usen ese ingrediente.</p>
+    <div class="form-row">
+      <div class="form-col grow"><label>Ingrediente</label><input type="text" id="mIng" placeholder="Ej: Lomo"></div>
+      <div class="form-col"><label>Merma %</label><input type="number" id="mPct" placeholder="30" style="width:80px" min="0" max="99"></div>
+      <button class="btn btn-a" onclick="addMerma()" style="align-self:flex-end">+ Agregar</button>
+    </div>
+    <div id="mermaList"><div class="empty">Sin mermas cargadas</div></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Sugeridas</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <button class="btn btn-s" onclick="addMR('Lomo',30)" style="font-size:12px;padding:4px 10px">Lomo 30%</button>
+      <button class="btn btn-s" onclick="addMR('Bife de chorizo',25)" style="font-size:12px;padding:4px 10px">Bife 25%</button>
+      <button class="btn btn-s" onclick="addMR('Pechuga',20)" style="font-size:12px;padding:4px 10px">Pechuga 20%</button>
+      <button class="btn btn-s" onclick="addMR('Muslo de pollo',20)" style="font-size:12px;padding:4px 10px">Muslo 20%</button>
+      <button class="btn btn-s" onclick="addMR('Pata muslo',20)" style="font-size:12px;padding:4px 10px">Pata muslo 20%</button>
+      <button class="btn btn-s" onclick="addMR('Nalga',22)" style="font-size:12px;padding:4px 10px">Nalga 22%</button>
+      <button class="btn btn-s" onclick="addMR('Peceto',25)" style="font-size:12px;padding:4px 10px">Peceto 25%</button>
+      <button class="btn btn-s" onclick="addMR('Matambre',20)" style="font-size:12px;padding:4px 10px">Matambre 20%</button>
+      <button class="btn btn-s" onclick="addMR('Trucha',15)" style="font-size:12px;padding:4px 10px">Trucha 15%</button>
+      <button class="btn btn-s" onclick="addMR('Papa entera',20)" style="font-size:12px;padding:4px 10px">Papa 20%</button>
+      <button class="btn btn-s" onclick="addMR('Calabaza entera',30)" style="font-size:12px;padding:4px 10px">Calabaza 30%</button>
+      <button class="btn btn-s" onclick="addMR('Zanahoria entera',15)" style="font-size:12px;padding:4px 10px">Zanahoria 15%</button>
+      <button class="btn btn-s" onclick="addMR('Espinaca congelada',10)" style="font-size:12px;padding:4px 10px">Espinaca 10%</button>
+      <button class="btn btn-s" onclick="addMR('Espárragos congelados',15)" style="font-size:12px;padding:4px 10px">Espárragos 15%</button>
+      <button class="btn btn-s" onclick="addMR('Remolacha entera',15)" style="font-size:12px;padding:4px 10px">Remolacha 15%</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+// ════════════════════════════════════════════
+// CUADRO MACRO
+// ════════════════════════════════════════════
+const MACRO = {
+  Almuerzo:{
+    g:{
+      Lunes:['Sopa crema de verduras','Muslito de pollo al horno','Lasagna de verduras','Papas al horno','Budín de brócoli'],
+      Martes:['Roll de queso y brócoli','Bife de chorizo con salsa demiglás','Calabaza noisette','Puré Gratinado'],
+      Miércoles:['Quesadilla','Matambre de ternera','Papas a la crema'],
+      Jueves:['Roll de queso y brócoli','Trucha salmonada','Papines salteados','Wok de verduras'],
+      Viernes:['Sopa de calabaza','Lomo al champignon','Budín de brócoli'],
+      Sábado:['Guiso de lentejas'],
+      Domingo:['Rotolo con estofado'],
+    },
+    l:{
+      Lunes:['Sopa crema de verduras','Wok de tirabuzón'],
+      Martes:['Sopa de Arroz','Tortilla de espinaca'],
+      Miércoles:['Sopa de calabaza','Risotto de calabaza'],
+      Jueves:['Sopa de Arroz','Creppe de espinaca','Salsa blanca'],
+      Viernes:['Sopa de calabaza','Creppe de espinaca','Wok de verduras'],
+      Sábado:['Sopa de avena','Tarta de verduras'],
+      Domingo:['Sopa crema de verduras','Rotolo con salsa blanca'],
+    },
+    lc:{
+      Lunes:['Lomo grillado'],Martes:['Pata muslo grillada'],Miércoles:['Pata muslo grillada'],
+      Jueves:['Medallón de pollo al horno'],Viernes:['Lomo grillado'],
+      Sábado:['Pata muslo grillada'],Domingo:['Medallón de pollo al horno'],
+    },
+    n:{
+      Lunes:['Sopa crema de verduras','Muslito de pollo al horno','Puré de calabaza'],
+      Martes:['Roll de queso y brócoli','Bife de chorizo con salsa demiglás','Calabaza noisette','Puré Gratinado'],
+      Miércoles:['Sopa de calabaza','Matambre de ternera','Verduras al horno'],
+      Jueves:['Medallón de pollo al horno','Papines salteados','Wok de verduras'],
+      Viernes:['Sopa de calabaza','Lomo al champignon','Puré Gratinado'],
+      Sábado:['Pizza de jamón y queso'],Domingo:['Rotolo con salsa blanca'],
+    },
+    a:{
+      Lunes:['Sopa crema de verduras','Muslito de pollo al horno','Lasagna de verduras','Papas al horno'],
+      Martes:['Roll de queso y brócoli','Bife de chorizo con salsa demiglás','Calabaza noisette','Puré Gratinado'],
+      Miércoles:['Quesadilla','Matambre de ternera','Papas a la crema'],
+      Jueves:['Trucha salmonada','Papines salteados','Wok de verduras'],
+      Viernes:['Sopa de calabaza','Lomo al champignon','Puré Gratinado'],
+      Sábado:['Pizza de jamón y queso'],Domingo:['Guiso de lentejas'],
+    },
+    b1:{
+      Lunes:['Lomo grillado','Vitina','Puré de boniato'],
+      Martes:['Medallón de pollo al horno','Fideos munición','Puré de boniato'],
+      Miércoles:['Medallón de pollo al horno','Puré de calabaza'],
+      Jueves:['Lomo grillado','Puré de papas general'],
+      Viernes:['Medallón de pollo al horno','Puré de verduras enriquecido'],
+      Sábado:['Medallón de pollo al horno','Vitina'],
+      Domingo:['Medallón de pollo al horno','Puré de Papa y Calabaza'],
+    },
+    b2:{
+      Lunes:['Lomo grillado','Puré de calabaza'],Martes:['Pata muslo grillada','Puré de papa liviano'],
+      Miércoles:['Pata muslo grillada','Puré de calabaza'],Jueves:['Lomo grillado','Puré de papas general'],
+      Viernes:['Medallón de pollo al horno','Puré de verduras enriquecido'],
+      Sábado:['Pata muslo grillada','Fideos munición'],
+      Domingo:['Medallón de pollo al horno','Puré de Papa y Calabaza'],
+    },
+    dbt:{
+      Lunes:['Sopa crema de verduras','Muslito de pollo al horno','Lasagna de verduras','Papas al horno'],
+      Martes:['Roll de queso y brócoli','Bife de chorizo con salsa demiglás','Calabaza noisette','Puré Gratinado'],
+      Miércoles:['Quesadilla','Matambre de ternera','Papas a la crema'],
+      Jueves:['Roll de queso y brócoli','Trucha salmonada','Creppe de espinaca','Wok de verduras'],
+      Viernes:['Sopa de calabaza','Lomo al champignon','Budín de brócoli'],
+      Sábado:['Guiso de lentejas'],Domingo:['Rotolo con estofado'],
+    },
+    bcb:{
+      Lunes:['Sopa crema de verduras','Muslito de pollo al horno','Lasagna de verduras','Papas al horno'],
+      Martes:['Roll de queso y brócoli','Bife de chorizo con salsa demiglás','Calabaza noisette','Puré Gratinado'],
+      Miércoles:['Sopa de calabaza','Matambre con papas a la crema'],
+      Jueves:['Sopa de Arroz','Medallón de pollo al horno','Papines salteados','Wok de verduras'],
+      Viernes:['Sopa de calabaza','Lomo grillado','Puré Gratinado'],
+      Sábado:['Guiso de lentejas'],Domingo:['Rotolo con estofado'],
+    },
+    veg:{
+      Lunes:['Sopa crema de verduras','Wok de tirabuzón'],
+      Martes:['Sopa de Arroz','Tortilla de espinaca','Calabaza noisette'],
+      Miércoles:['Quesadilla','Hamburguesa vegana','Papas a la crema'],
+      Jueves:['Roll de queso y brócoli','Creppe de espinaca','Salsa blanca','Papines salteados'],
+      Viernes:['Sopa de calabaza','Creppe de espinaca','Wok de verduras'],
+      Sábado:['Sopa de avena','Tarta de verduras'],
+      Domingo:['Empanada de queso y cebolla','Rotolo con salsa blanca'],
+    },
+    ast:{
+      Lunes:['Lomo grillado','Arroz crudo'],Martes:['Pata muslo grillada','Puré de papa liviano'],
+      Miércoles:['Pata muslo grillada','Polenta cremosa'],Jueves:['Lomo grillado','Ñoquis'],
+      Viernes:['Pata muslo grillada','Sorrentinos de Jamón y Queso'],
+      Sábado:['Pata muslo grillada','Capelettis cocidos'],
+      Domingo:['Medallón de pollo al horno','Polenta cremosa'],
+    },
+    sl:{
+      Lunes:['Sopa crema de verduras','Puré de papa liviano'],
+      Martes:['Sopa de Arroz','Puré de verduras enriquecido'],
+      Miércoles:['Sopa de calabaza','Puré de calabaza'],
+      Jueves:['Sopa de Arroz','Puré de papa y zanahoria enriquecido'],
+      Viernes:['Sopa de calabaza','Puré de verduras enriquecido'],
+      Sábado:['Sopa de avena','Puré de calabaza enriquecido'],
+      Domingo:['Sopa crema de verduras','Puré de Papa y Calabaza'],
+    },
+    ids4:{
+      Lunes:['Lomo grillado','Puré de papa enriquecido'],
+      Martes:['Bife de chorizo con salsa demiglás','Puré de verduras enriquecido'],
+      Miércoles:['Matambre de ternera','Puré de calabaza enriquecido'],
+      Jueves:['Pollo al curry + arroz + brócoli','Puré de papa y zanahoria enriquecido'],
+      Viernes:['Lomo al champignon','Puré de papa enriquecido'],
+      Sábado:['Pollo al curry + arroz + brócoli','Puré de verduras enriquecido'],
+      Domingo:['Rotolo con estofado','Puré de Papa y Calabaza enriquecido'],
+    },
+    ids5:{
+      Lunes:['Lomo grillado','Puré de papa enriquecido'],
+      Martes:['Bife de chorizo con salsa demiglás','Puré de verduras enriquecido'],
+      Miércoles:['Pollo al curry + arroz + brócoli','Puré de calabaza enriquecido'],
+      Jueves:['Pollo al curry + arroz + brócoli','Puré de papa y zanahoria enriquecido'],
+      Viernes:['Lomo al champignon','Puré de papa enriquecido'],
+      Sábado:['Pollo al curry + arroz + brócoli','Puré de verduras enriquecido'],
+      Domingo:['Rotolo con estofado','Puré de Papa y Calabaza enriquecido'],
+    },
+    ids6:{
+      Lunes:['Lomo grillado','Puré de papa enriquecido'],
+      Martes:['Bife de chorizo con salsa demiglás','Puré de verduras enriquecido'],
+      Miércoles:['Matambre de ternera','Puré de calabaza enriquecido'],
+      Jueves:['Pollo al curry + arroz + brócoli','Puré de papa y zanahoria enriquecido'],
+      Viernes:['Lomo al champignon','Puré de papa enriquecido'],
+      Sábado:['Pollo al curry + arroz + brócoli','Puré de verduras enriquecido'],
+      Domingo:['Rotolo con estofado','Puré de Papa y Calabaza enriquecido'],
+    },
+    ids7:{
+      Lunes:['Lomo grillado','Puré de papa enriquecido'],
+      Martes:['Bife de chorizo con salsa demiglás','Puré de verduras enriquecido'],
+      Miércoles:['Matambre de ternera','Puré de calabaza enriquecido'],
+      Jueves:['Pollo al curry + arroz + brócoli','Puré de papa y zanahoria enriquecido'],
+      Viernes:['Lomo al champignon','Puré de papa enriquecido'],
+      Sábado:['Pata muslo grillada','Puré de verduras enriquecido'],
+      Domingo:['Rotolo con estofado','Puré de Papa y Calabaza'],
+    },
+    exc:{
+      Lunes:['Milanesa napolitana','Omelette','Verduras al horno'],
+      Martes:['Ñoquis','Omelette'],Miércoles:['Nugget de pollo','Ensalada rusa','Arroz crudo'],
+      Jueves:['Fideos munición','Wok de verduras'],Viernes:['Salsa Filetto','Lomito de carne'],
+      Sábado:['Milanesa de pollo','Verduras al horno'],Domingo:['Papas al horno','Lomito de pollo'],
+    },
+  },
+  Cena:{
+    g:{
+      Lunes:['Sopa crema de espárragos','Quiche Lorraine','Espárragos gratinados'],
+      Martes:['Sopa Munición','Creppe de salmón','Salsa blanca'],
+      Miércoles:['Sopa crema de verduras','Pollo al curry + arroz + brócoli'],
+      Jueves:['Sopa de calabaza','Milanesa napolitana','Puré de papas general'],
+      Viernes:['Sopa crema de espárragos','Tallarines mediterráneos'],
+      Sábado:['Sopa de Arroz','Lomo Strogonoff','Puré de papas general'],
+      Domingo:['Sopa de sémola','Pollo oriental','Timbal de arroz'],
+    },
+    l:{
+      Lunes:['Sopa de Arroz','Tarta de calabaza y queso','Espárragos gratinados','Chauchas salteadas'],
+      Martes:['Sopa Munición','Creppe de calabaza y zanahoria'],
+      Miércoles:['Sopa crema de verduras','Budín Tricolor','Salsa blanca','Papas a la crema'],
+      Jueves:['Sopa de sémola','Wok de tirabuzón'],
+      Viernes:['Sopa Munición','Budín de papa y zanahoria','Zanahorias caramelizadas'],
+      Sábado:['Sopa crema de verduras','Ravioles 3 quesos','Salsa blanca'],
+      Domingo:['Sopa de sémola','Flan de zanahoria','Flan de espinaca','Salsa blanca'],
+    },
+    lc:{
+      Lunes:['Pata muslo grillada'],Martes:['Lomo grillado'],Miércoles:['Pata muslo grillada'],
+      Jueves:['Pata muslo grillada'],Viernes:['Medallón de pollo al horno'],
+      Sábado:['Lomo grillado'],Domingo:['Lomo grillado'],
+    },
+    n:{
+      Lunes:['Sorrentinos de Jamón y Queso','Salsa Mixta'],
+      Martes:['Nugget de pollo','Puré de calabaza'],
+      Miércoles:['Pata muslo grillada','Fideos munición','Salsa Filetto'],
+      Jueves:['Milanesa napolitana','Puré de papas general'],
+      Viernes:['Medallón de pollo al horno','Tallarines mediterráneos'],
+      Sábado:['Lomito de carne','Papas al horno'],
+      Domingo:['Milanesa de pollo','Puré de calabaza'],
+    },
+    a:{
+      Lunes:['Sorrentinos de Jamón y Queso','Salsa Mixta'],
+      Martes:['Nugget de pollo','Puré de calabaza'],
+      Miércoles:['Pollo al curry + arroz + brócoli'],
+      Jueves:['Milanesa napolitana','Puré de papas general'],
+      Viernes:['Medallón de pollo al horno','Tallarines mediterráneos'],
+      Sábado:['Lomito de carne','Papas al horno'],
+      Domingo:['Milanesa de pollo','Puré de calabaza'],
+    },
+    b1:{
+      Lunes:['Pata muslo grillada','Puré de papa y zanahoria enriquecido'],
+      Martes:['Lomo grillado','Puré de zanahoria y calabaza enriquecido'],
+      Miércoles:['Pata muslo grillada','Vitina'],Jueves:['Pata muslo grillada','Polenta cremosa'],
+      Viernes:['Medallón de pollo al horno','Fideos munición'],
+      Sábado:['Lomo grillado','Puré de zanahoria y calabaza enriquecido'],
+      Domingo:['Lomo grillado','Puré de verduras enriquecido'],
+    },
+    b2:{
+      Lunes:['Pata muslo grillada','Tallarines secos'],
+      Martes:['Nugget de pollo','Puré de calabaza'],
+      Miércoles:['Pata muslo grillada','Fideos munición'],
+      Jueves:['Milanesa napolitana','Puré de papas general'],
+      Viernes:['Medallón de pollo al horno','Puré de Papa y Calabaza'],
+      Sábado:['Lomo grillado','Puré de zanahoria y calabaza enriquecido'],
+      Domingo:['Lomo grillado','Puré de verduras enriquecido'],
+    },
+    dbt:{
+      Lunes:['Sopa crema de espárragos','Tarta de verduras','Espárragos gratinados','Chauchas salteadas'],
+      Martes:['Sopa Munición','Creppe de salmón','Salsa blanca'],
+      Miércoles:['Sopa crema de verduras','Pollo al curry + arroz + brócoli'],
+      Jueves:['Sopa de calabaza','Milanesa napolitana','Puré de papas general'],
+      Viernes:['Sopa crema de espárragos','Budín de papa y zanahoria','Zanahorias caramelizadas'],
+      Sábado:['Sopa crema de verduras','Lomo Strogonoff','Puré de zanahoria y calabaza enriquecido'],
+      Domingo:['Sopa de sémola','Pollo oriental','Timbal de arroz'],
+    },
+    bcb:{
+      Lunes:['Sopa crema de espárragos','Quiche Lorraine'],
+      Martes:['Sopa Munición','Lomo grillado','Creppe de calabaza y zanahoria'],
+      Miércoles:['Sopa crema de verduras','Milanesa de pollo','Verduras al horno'],
+      Jueves:['Sopa de sémola','Milanesa napolitana','Puré de papas general'],
+      Viernes:['Sopa Munición','Tallarines mediterráneos'],
+      Sábado:['Sopa crema de verduras','Lomo Strogonoff','Puré de papas general'],
+      Domingo:['Sopa de sémola','Milanesa de pollo','Puré de calabaza'],
+    },
+    veg:{
+      Lunes:['Sopa crema de espárragos','Tarta de verduras','Espárragos gratinados'],
+      Martes:['Sopa de calabaza','Creppe de calabaza y zanahoria'],
+      Miércoles:['Sopa crema de verduras','Omelette','Arroz crudo'],
+      Jueves:['Sopa de calabaza','Hamburguesa vegana','Puré de papas general'],
+      Viernes:['Sopa Munición','Tallarines mediterráneos'],
+      Sábado:['Sopa crema de verduras','Ravioles 3 quesos','Salsa blanca'],
+      Domingo:['Sopa de sémola','Flan de zanahoria','Flan de espinaca','Salsa blanca'],
+    },
+    ast:{
+      Lunes:['Pata muslo grillada','Tallarines secos'],
+      Martes:['Lomo grillado','Zanahorias salteadas con arroz'],
+      Miércoles:['Pata muslo grillada','Sorrentinos de Jamón y Queso'],
+      Jueves:['Pata muslo grillada','Capelettis cocidos'],
+      Viernes:['Medallón de pollo al horno','Arroz crudo'],
+      Sábado:['Lomo grillado','Tallarines secos'],Domingo:['Lomo grillado','Arroz crudo'],
+    },
+    sl:{
+      Lunes:['Sopa de Arroz','Puré de papa y zanahoria enriquecido'],
+      Martes:['Sopa Munición','Puré de calabaza'],
+      Miércoles:['Sopa crema de verduras','Puré de zanahoria y calabaza enriquecido'],
+      Jueves:['Sopa de sémola','Puré de calabaza'],
+      Viernes:['Sopa Munición','Puré de Papa y Calabaza'],
+      Sábado:['Sopa crema de verduras','Puré de zanahoria y calabaza enriquecido'],
+      Domingo:['Sopa de Arroz','Puré de verduras enriquecido'],
+    },
+    ids4:{
+      Lunes:['Pollo al curry + arroz + brócoli','Salsa blanca','Puré de papa y zanahoria enriquecido'],
+      Martes:['Lomo grillado','Puré de calabaza enriquecido'],
+      Miércoles:['Pollo al curry + arroz + brócoli','Salsa blanca','Puré de zanahoria y calabaza enriquecido'],
+      Jueves:['Pollo al curry + arroz + brócoli','Polenta cremosa'],
+      Viernes:['Pollo al curry + arroz + brócoli','Salsa blanca','Puré de Papa y Calabaza enriquecido'],
+      Sábado:['Lomo Strogonoff','Puré de papa enriquecido'],
+      Domingo:['Pollo oriental','Salsa blanca','Puré de verduras enriquecido'],
+    },
+    ids5:{
+      Lunes:['Pollo al curry + arroz + brócoli','Salsa blanca','Tarta de verduras'],
+      Martes:['Lomo grillado','Puré de calabaza enriquecido'],
+      Miércoles:['Pollo al curry + arroz + brócoli','Salsa blanca','Puré de zanahoria y calabaza enriquecido'],
+      Jueves:['Pollo al curry + arroz + brócoli','Polenta cremosa'],
+      Viernes:['Pollo al curry + arroz + brócoli','Salsa blanca','Puré de Papa y Calabaza enriquecido'],
+      Sábado:['Lomo Strogonoff','Puré de papa enriquecido'],
+      Domingo:['Pollo oriental','Salsa blanca','Puré de verduras enriquecido'],
+    },
+    ids6:{
+      Lunes:['Pollo al curry + arroz + brócoli','Salsa blanca','Tarta de verduras'],
+      Martes:['Lomo grillado','Salsa blanca','Puré de calabaza enriquecido'],
+      Miércoles:['Pollo al curry + arroz + brócoli','Salsa blanca','Puré de zanahoria y calabaza enriquecido'],
+      Jueves:['Pollo al curry + arroz + brócoli','Polenta cremosa'],
+      Viernes:['Pollo al curry + arroz + brócoli','Salsa blanca','Puré de Papa y Calabaza enriquecido'],
+      Sábado:['Lomo Strogonoff','Puré de papa enriquecido'],
+      Domingo:['Pollo oriental','Salsa blanca','Puré de verduras enriquecido'],
+    },
+    ids7:{
+      Lunes:['Pata muslo grillada','Tarta de verduras'],
+      Martes:['Lomo grillado','Salsa blanca','Puré de calabaza enriquecido'],
+      Miércoles:['Pollo al curry + arroz + brócoli','Puré de zanahoria y calabaza enriquecido'],
+      Jueves:['Milanesa napolitana','Puré de papas general'],
+      Viernes:['Pollo al curry + arroz + brócoli','Salsa blanca','Puré de Papa y Calabaza'],
+      Sábado:['Lomo Strogonoff','Puré de papa liviano'],
+      Domingo:['Pollo oriental','Salsa blanca','Puré de verduras enriquecido'],
+    },
+    exc:{
+      Lunes:['Omelette','Espárragos gratinados'],
+      Martes:['Milanesa napolitana','Sorrentinos de Jamón y Queso','Ensalada remolacha y huevo'],
+      Miércoles:['Omelette','Verduras al horno','Ñoquis'],
+      Jueves:['Sorrentinos de Jamón y Queso','Ensalada de lenteja y huevo'],
+      Viernes:['Sorrentinos de Jamón y Queso'],
+      Sábado:['Sorrentinos de Jamón y Queso','Omelette'],
+      Domingo:['Ravioles 3 quesos','Verduras al horno'],
+    },
+  }
+};
+
+// ════════════════════════════════════════════
+// RECETAS
+// ════════════════════════════════════════════
+const REC = {
+"Lomo grillado":{t:"PP",i:[{i:"Lomo",c:150,u:"g"}]},
+"Lomo al champignon":{t:"PP",i:[{i:"Lomo",c:150,u:"g"},{i:"Puerro",c:35,u:"g"},{i:"Champignon",c:30,u:"g"},{i:"Hongos secos",c:2,u:"g"},{i:"Vino blanco",c:50,u:"ml"},{i:"Crema de leche",c:10,u:"g"},{i:"Demiglasse",c:0.5,u:"g"}]},
+"Lomo Strogonoff":{t:"PP",i:[{i:"Lomo",c:120,u:"g"},{i:"Vino blanco",c:30,u:"ml"},{i:"Crema de leche",c:30,u:"g"}]},
+"Lomito de carne":{t:"PP",i:[{i:"Pan lomito",c:1,u:"unidad"},{i:"Lomo",c:150,u:"g"},{i:"Queso Tybo",c:50,u:"g"},{i:"Huevo",c:52,u:"g"}]},
+"Lomito de pollo":{t:"PP",i:[{i:"Pan lomito",c:1,u:"unidad"},{i:"Pechuga",c:150,u:"g"},{i:"Queso Tybo",c:70,u:"g"},{i:"Huevo",c:52,u:"g"}]},
+"Bife de chorizo con salsa demiglás":{t:"PP",i:[{i:"Bife de chorizo",c:150,u:"g"},{i:"Panceta",c:20,u:"g"},{i:"Cebolla entera",c:20,u:"g"},{i:"Puerro",c:10,u:"g"},{i:"Vino blanco",c:10,u:"ml"},{i:"Demiglasse",c:4,u:"g"},{i:"Salsa de soja",c:3,u:"g"}]},
+"Matambre de ternera":{t:"PP",i:[{i:"Matambre de ternera crudo",c:150,u:"g"}]},
+"Matambre con papas a la crema":{t:"PP",i:[{i:"Matambre cocido",c:150,u:"g"},{i:"Brócoli congelado",c:100,u:"g"},{i:"Papa española",c:80,u:"g"},{i:"Crema de leche",c:18,u:"g"},{i:"Queso regianitto",c:20,u:"g"}]},
+"Milanesa napolitana":{t:"PP",i:[{i:"Carne",c:150,u:"g"},{i:"Pan rallado",c:50,u:"g"},{i:"Tomate cubo",c:100,u:"g"},{i:"Queso cremoso",c:30,u:"g"}]},
+"Milanesa de pollo":{t:"PP",i:[{i:"Pechuga",c:150,u:"g"},{i:"Pan rallado",c:20,u:"g"},{i:"Huevo",c:20,u:"g"}]},
+"Muslito de pollo al horno":{t:"PP",i:[{i:"Muslo de pollo",c:180,u:"g"},{i:"Vino blanco",c:30,u:"ml"}]},
+"Pata muslo grillada":{t:"PP",i:[{i:"Pata muslo deshuesada",c:150,u:"g"}]},
+"Medallón de pollo al horno":{t:"PP",i:[{i:"Pechuga",c:150,u:"g"},{i:"Miel",c:0.1,u:"g"},{i:"Mostaza de dijon",c:0.1,u:"g"},{i:"Vino blanco",c:50,u:"ml"}]},
+"Pollo al curry + arroz + brócoli":{t:"PP",i:[{i:"Pechuga",c:150,u:"g"},{i:"Curry",c:3,u:"g"},{i:"Crema de leche",c:40,u:"g"},{i:"Arroz parborizado",c:75,u:"g"},{i:"Brócoli congelado",c:60,u:"g"},{i:"Zanahoria entera",c:60,u:"g"}]},
+"Pollo oriental":{t:"PP",i:[{i:"Pechuga",c:180,u:"g"},{i:"Salsa de soja",c:10,u:"ml"},{i:"Curry",c:0.2,u:"g"},{i:"Vino blanco",c:30,u:"g"},{i:"Crema de leche",c:20,u:"g"},{i:"Repollo blanco",c:25,u:"g"},{i:"Arroz parborizado",c:50,u:"g"}]},
+"Nugget de pollo":{t:"PP",i:[{i:"Pechuga",c:50,u:"g"},{i:"Copos de maíz",c:10,u:"g"},{i:"Pan rallado",c:10,u:"g"},{i:"Harina de maíz",c:10,u:"g"},{i:"Huevo",c:28,u:"g"}]},
+"Creppe de salmón":{t:"PP",i:[{i:"Pulpa de salmón",c:150,u:"g"},{i:"Puerro",c:30,u:"g"},{i:"Crema de leche",c:30,u:"g"},{i:"Queso Sardo",c:40,u:"g"},{i:"Queso regianitto",c:30,u:"g"}]},
+"Trucha salmonada":{t:"PP",i:[{i:"Trucha salmonada cruda",c:170,u:"g"},{i:"Crema de leche",c:30,u:"g"},{i:"Papines",c:80,u:"g"}]},
+"Guiso de lentejas":{t:"PP",i:[{i:"Lentejas",c:86,u:"g"},{i:"Zanahoria cubo",c:14,u:"g"},{i:"Nalga",c:107,u:"g"},{i:"Pimiento rojo",c:21,u:"g"},{i:"Vino blanco",c:29,u:"g"},{i:"Puré de tomate",c:20,u:"g"},{i:"Cebolla entera",c:21,u:"g"},{i:"Panceta ahumada",c:14,u:"g"},{i:"Queso crema",c:10,u:"g"},{i:"Boniato entero",c:50,u:"g"}]},
+"Rotolo con estofado":{t:"PP",i:[{i:"Rótolo crudo",c:100,u:"g"},{i:"Queso Tybo",c:20,u:"g"},{i:"Nalga",c:100,u:"g"},{i:"Cebolla entera",c:30,u:"g"},{i:"Tomate fresco",c:80,u:"g"},{i:"Vino blanco",c:40,u:"cc"}]},
+"Rotolo con salsa blanca":{t:"PP",i:[{i:"Rótolo crudo",c:100,u:"g"},{i:"Queso Tybo",c:20,u:"g"},{i:"Salsa blanca",c:35,u:"g"}]},
+"Quiche Lorraine":{t:"PP",i:[{i:"Queso Sardo",c:42,u:"g"},{i:"Queso reggianito",c:42,u:"g"},{i:"Crema de leche",c:33,u:"g"},{i:"Cebolla entera",c:25,u:"g"},{i:"Panceta ahumada",c:25,u:"g"},{i:"Puerro",c:25,u:"g"},{i:"Champignon",c:4,u:"g"},{i:"Brócoli congelado",c:6,u:"g"},{i:"Huevo",c:75,u:"g"}]},
+"Tallarines mediterráneos":{t:"PP",i:[{i:"Fetuccini",c:80,u:"g"},{i:"Crema de leche",c:50,u:"g"},{i:"Tomate cherry",c:100,u:"g"},{i:"Alcaparras",c:10,u:"g"},{i:"Queso parmesano",c:30,u:"g"}]},
+"Wok de tirabuzón":{t:"PP",i:[{i:"Tallarines secos",c:60,u:"g"},{i:"Chaucha congelada",c:20,u:"g"},{i:"Zapallitos enteros",c:20,u:"g"},{i:"Zucchini entero",c:20,u:"g"},{i:"Zanahoria entera",c:20,u:"g"},{i:"Tomate cherry",c:20,u:"g"},{i:"Puerro",c:10,u:"g"}]},
+"Risotto de calabaza":{t:"PP",i:[{i:"Arroz parborizado",c:33,u:"g"},{i:"Cebolla entera",c:16,u:"g"},{i:"Queso Tybo",c:10,u:"g"},{i:"Manteca",c:1.66,u:"g"},{i:"Vino blanco",c:5,u:"g"},{i:"Calabaza entera",c:42,u:"g"}]},
+"Tortilla de espinaca":{t:"PP",i:[{i:"Espinaca congelada",c:80,u:"g"},{i:"Cebolla entera",c:20,u:"g"},{i:"Queso Tybo",c:20,u:"g"},{i:"Huevo",c:50,u:"g"},{i:"Queso crema",c:5,u:"g"}]},
+"Tarta de verduras":{t:"PP",i:[{i:"Masa de tarta (30x50)",c:0.25,u:"unidad"},{i:"Calabaza cubo",c:75,u:"g"},{i:"Zanahoria cubo",c:50,u:"g"},{i:"Zapallitos enteros",c:50,u:"g"},{i:"Cebolla entera",c:90,u:"g"},{i:"Huevo",c:39,u:"g"},{i:"Queso Tybo",c:22.5,u:"g"},{i:"Queso crema",c:5,u:"g"}]},
+"Tarta de calabaza y queso":{t:"PP",i:[{i:"Masa de tarta (30x50)",c:0.25,u:"unidad"},{i:"Calabaza cubo",c:175,u:"g"},{i:"Cebolla entera",c:22.5,u:"g"},{i:"Huevo",c:39,u:"g"},{i:"Queso cremoso",c:25,u:"g"},{i:"Queso Tybo",c:30,u:"g"},{i:"Queso crema",c:5,u:"g"}]},
+"Hamburguesa vegana":{t:"PP",i:[{i:"Hamburguesa vegana cruda",c:1,u:"unidad"}]},
+"Pizza de jamón y queso":{t:"PP",i:[{i:"Pre Pizza",c:1,u:"unidad"},{i:"Tomate perita",c:80,u:"g"},{i:"Jamón Cocido",c:25,u:"g"},{i:"Queso cremoso",c:90,u:"g"}]},
+"Omelette":{t:"PP",i:[{i:"Huevo",c:104,u:"g"},{i:"Queso Tybo",c:30,u:"g"}]},
+"Creppe de espinaca":{t:"PP",i:[{i:"Espinaca congelada",c:35,u:"g"},{i:"Queso Tybo",c:15,u:"g"},{i:"Queso crema",c:5,u:"g"},{i:"Leche descremada",c:33,u:"ml"},{i:"Harina",c:16,u:"g"},{i:"Huevo",c:10,u:"g"}]},
+"Creppe de calabaza y zanahoria":{t:"PP",i:[{i:"Zanahoria entera",c:15,u:"g"},{i:"Calabaza entera",c:50,u:"g"},{i:"Queso Tybo",c:20,u:"g"},{i:"Huevo",c:10,u:"g"},{i:"Harina",c:16.6,u:"g"},{i:"Leche descremada",c:33,u:"ml"},{i:"Espinaca congelada",c:16.7,u:"g"}]},
+"Flan de zanahoria":{t:"PP",i:[{i:"Zanahoria entera",c:50,u:"g"},{i:"Crema de leche",c:10,u:"g"},{i:"Huevo",c:28,u:"g"}]},
+"Flan de espinaca":{t:"PP",i:[{i:"Espinaca congelada",c:100,u:"g"},{i:"Leche descremada",c:20,u:"g"},{i:"Huevo",c:30,u:"g"},{i:"Queso Tybo",c:20,u:"g"}]},
+"Budín Tricolor":{t:"PP",i:[{i:"Papa entera",c:60,u:"g"},{i:"Calabaza entera",c:70,u:"g"},{i:"Remolacha entera",c:70,u:"g"},{i:"Queso crema",c:60,u:"g"},{i:"Huevo",c:52,u:"g"}]},
+"Lasagna de verduras":{t:"PP",i:[{i:"Zucchini entero",c:40,u:"g"},{i:"Papa entera",c:120,u:"g"},{i:"Zanahoria rallada",c:40,u:"g"},{i:"Espinaca congelada",c:60,u:"g"},{i:"Queso Tybo",c:20,u:"g"},{i:"Queso cremoso",c:20,u:"g"}]},
+"Ravioles 3 quesos":{t:"PP",i:[{i:"Raviol 3 quesos crudo",c:9,u:"unidad"}]},
+"Ñoquis":{t:"PP",i:[{i:"Ñoquis crudos",c:100,u:"g"}]},
+"Sorrentinos de Jamón y Queso":{t:"PP",i:[{i:"Sorrentinos JyQ crudos",c:7,u:"unidad"}]},
+"Capelettis cocidos":{t:"PP",i:[{i:"Capelettis crudos",c:80,u:"g"}]},
+"Empanada de queso y cebolla":{t:"PP",i:[{i:"Masa de empanada",c:1,u:"unidad"},{i:"Cebolla entera",c:8.33,u:"g"},{i:"Queso cremoso",c:25,u:"g"},{i:"Queso regianitto",c:6.25,u:"g"}]},
+"Roll de queso y brócoli":{t:"EN",i:[{i:"Masa Filo",c:8.33,u:"g"},{i:"Brócoli congelado",c:17,u:"g"},{i:"Queso crema",c:3.33,u:"g"},{i:"Queso gruyere",c:6.66,u:"g"},{i:"Manteca Ghee",c:5,u:"g"}]},
+"Quesadilla":{t:"EN",i:[{i:"Masa Fajita",c:1,u:"unidad"},{i:"Queso cremoso",c:60,u:"g"},{i:"Queso Tybo Feta",c:30,u:"g"}]},
+"Ensalada remolacha y huevo":{t:"EN",i:[{i:"Remolacha entera",c:80,u:"g"},{i:"Huevo",c:26,u:"g"}]},
+"Ensalada rusa":{t:"EN",i:[{i:"Zanahoria cubo",c:40,u:"g"},{i:"Papa cubo",c:40,u:"g"},{i:"Arvejas congeladas",c:10,u:"g"},{i:"Mayonesa",c:1,u:"sobre"}]},
+"Ensalada de lenteja y huevo":{t:"EN",i:[{i:"Lentejas",c:40,u:"g"},{i:"Huevo",c:52,u:"g"}]},
+"Sopa crema de verduras":{t:"SO",i:[{i:"Mix sopa",c:1,u:"bolsa"},{i:"Queso crema",c:2,u:"g"}]},
+"Sopa crema de espárragos":{t:"SO",i:[{i:"Mix sopa",c:1,u:"bolsa"},{i:"Espárragos congelados",c:56,u:"g"},{i:"Cebolla entera",c:8,u:"g"},{i:"Queso Tybo",c:10,u:"g"}]},
+"Sopa de calabaza":{t:"SO",i:[{i:"Mix sopa",c:2,u:"bolsa"},{i:"Calabaza entera",c:20,u:"g"}]},
+"Sopa de Arroz":{t:"SO",i:[{i:"Mix sopa",c:2,u:"bolsa"},{i:"Arroz parborizado",c:10,u:"g"}]},
+"Sopa Munición":{t:"SO",i:[{i:"Mix sopa",c:1,u:"bolsa"},{i:"Fideos munición crudos",c:5,u:"g"}]},
+"Sopa de sémola":{t:"SO",i:[{i:"Mix sopa",c:1,u:"bolsa"},{i:"Sémola",c:5,u:"g"}]},
+"Sopa de avena":{t:"SO",i:[{i:"Mix sopa",c:1,u:"bolsa"},{i:"Avena",c:5,u:"g"}]},
+"Puré Gratinado":{t:"GU",i:[{i:"Papa entera",c:65,u:"g"},{i:"Queso Tybo",c:20,u:"g"}]},
+"Puré de papa liviano":{t:"GU",i:[{i:"Papa entera",c:150,u:"g"}]},
+"Puré de papa enriquecido":{t:"GU",i:[{i:"Papa entera",c:150,u:"g"},{i:"Crema de leche",c:15,u:"g"}]},
+"Puré de papas general":{t:"GU",i:[{i:"Papa entera",c:150,u:"g"},{i:"Leche descremada",c:12,u:"ml"},{i:"Manteca",c:5,u:"g"}]},
+"Puré de Papa y Calabaza":{t:"GU",i:[{i:"Papa entera",c:75,u:"g"},{i:"Calabaza entera",c:75,u:"g"}]},
+"Puré de Papa y Calabaza enriquecido":{t:"GU",i:[{i:"Papa entera",c:75,u:"g"},{i:"Calabaza entera",c:75,u:"g"},{i:"Crema de leche",c:15,u:"g"}]},
+"Puré de calabaza":{t:"GU",i:[{i:"Calabaza entera",c:150,u:"g"}]},
+"Puré de calabaza enriquecido":{t:"GU",i:[{i:"Calabaza entera",c:150,u:"g"},{i:"Crema de leche",c:15,u:"g"}]},
+"Puré de zanahoria y calabaza enriquecido":{t:"GU",i:[{i:"Zanahoria entera",c:75,u:"g"},{i:"Calabaza entera",c:75,u:"g"},{i:"Crema de leche",c:15,u:"g"}]},
+"Puré de papa y zanahoria enriquecido":{t:"GU",i:[{i:"Papa entera",c:75,u:"g"},{i:"Zanahoria entera",c:75,u:"g"},{i:"Crema de leche",c:15,u:"g"}]},
+"Puré de verduras enriquecido":{t:"GU",i:[{i:"Zapallitos enteros",c:50,u:"g"},{i:"Calabaza entera",c:50,u:"g"},{i:"Papa entera",c:50,u:"g"},{i:"Crema de leche",c:15,u:"g"}]},
+"Puré de boniato":{t:"GU",i:[{i:"Boniato entero",c:200,u:"g"},{i:"Leche descremada",c:15,u:"ml"},{i:"Manteca",c:5,u:"g"}]},
+"Arroz crudo":{t:"GU",i:[{i:"Arroz parborizado",c:30,u:"g"}]},
+"Timbal de arroz":{t:"GU",i:[{i:"Arroz parborizado",c:50,u:"g"},{i:"Queso Tybo",c:10,u:"g"},{i:"Queso crema",c:10,u:"g"}]},
+"Polenta cremosa":{t:"GU",i:[{i:"Polenta",c:50,u:"g"},{i:"Queso crema",c:20,u:"g"}]},
+"Papas al horno":{t:"GU",i:[{i:"Papa horno",c:120,u:"g"}]},
+"Papas a la crema":{t:"GU",i:[{i:"Papa española",c:100,u:"g"},{i:"Crema de leche",c:30,u:"g"},{i:"Queso Tybo",c:10,u:"g"},{i:"Queso regianitto",c:10,u:"g"}]},
+"Papines salteados":{t:"GU",i:[{i:"Papines",c:80,u:"g"}]},
+"Calabaza noisette":{t:"GU",i:[{i:"Calabaza noisette cruda",c:75,u:"g"}]},
+"Wok de verduras":{t:"GU",i:[{i:"Zanahoria entera",c:20,u:"g"},{i:"Zapallitos enteros",c:20,u:"g"},{i:"Zucchini entero",c:20,u:"g"}]},
+"Verduras al horno":{t:"GU",i:[{i:"Calabaza entera",c:50,u:"g"},{i:"Papa entera",c:50,u:"g"},{i:"Zucchini entero",c:50,u:"g"}]},
+"Budín de papa y zanahoria":{t:"GU",i:[{i:"Papa entera",c:60,u:"g"},{i:"Zanahoria entera",c:60,u:"g"},{i:"Huevo",c:52,u:"g"}]},
+"Budín de brócoli":{t:"GU",i:[{i:"Brócoli congelado",c:29,u:"g"},{i:"Cebolla entera",c:17,u:"g"},{i:"Queso crema ligth",c:20,u:"g"},{i:"Queso Tybo",c:20,u:"g"}]},
+"Budín de calabaza":{t:"GU",i:[{i:"Calabaza entera",c:70,u:"g"},{i:"Cebolla entera",c:10,u:"g"},{i:"Queso regianitto",c:20,u:"g"},{i:"Huevo",c:28,u:"g"},{i:"Crema de leche",c:15,u:"g"}]},
+"Salsa blanca":{t:"GU",i:[{i:"Leche descremada",c:100,u:"ml"},{i:"Fécula de maíz",c:5,u:"g"}]},
+"Salsa Filetto":{t:"GU",i:[{i:"Vino blanco",c:30,u:"ml"},{i:"Cebolla entera",c:20,u:"g"},{i:"Pimiento rojo",c:30,u:"g"},{i:"Tomate perita",c:100,u:"g"}]},
+"Salsa Mixta":{t:"GU",i:[{i:"Crema de leche",c:10,u:"g"},{i:"Vino blanco",c:30,u:"ml"},{i:"Cebolla entera",c:20,u:"g"},{i:"Pimiento rojo",c:30,u:"g"},{i:"Tomate perita",c:100,u:"g"}]},
+"Espárragos gratinados":{t:"GU",i:[{i:"Espárragos congelados",c:50,u:"g"},{i:"Crema de leche",c:10,u:"g"},{i:"Queso Sardo",c:5,u:"g"}]},
+"Chauchas salteadas":{t:"GU",i:[{i:"Chaucha congelada",c:50,u:"g"}]},
+"Zanahorias caramelizadas":{t:"GU",i:[{i:"Zanahoria entera",c:60,u:"g"},{i:"Azúcar",c:0.5,u:"g"}]},
+"Zanahorias salteadas con arroz":{t:"GU",i:[{i:"Arroz parborizado",c:60,u:"g"},{i:"Zanahoria entera",c:75,u:"g"}]},
+"Fideos munición":{t:"GU",i:[{i:"Fideos munición crudos",c:60,u:"g"}]},
+"Tallarines secos":{t:"GU",i:[{i:"Tallarines secos",c:60,u:"g"}]},
+"Vitina":{t:"GU",i:[{i:"Vitina cruda",c:25,u:"g"},{i:"Caldo",c:200,u:"ml"}]},
+};
+
+const DIETAS={g:'General',l:'Liviano',lc:'Liv. c/carne',n:'Niño',a:'Adolescente',b1:'Bebé 1',b2:'Bebé 2',dbt:'DBT',bcb:'BCB',veg:'Vegetariano',cel:'Celíaco',ast:'Astringente',sl:'Súper liviano',ids4:'IDSSI 4',ids5:'IDSSI 5',ids6:'IDSSI 6',ids7:'IDSSI 7',exc:'Excepción'};
+const TPILL={PP:'pill pill-pp',GU:'pill pill-gu',EN:'pill pill-en',SO:'pill pill-so',PO:'pill pill-po'};
+const TPILL_MI={PP:'mi-pp',GU:'mi-gu',EN:'mi-en',SO:'mi-so',PO:'mi-po'};
+
+let items=[],mermas={},proveedores=[],plantillas=[],comboRecetas=[],recSelC='';
+let filtroU='todo',vista='consolidado';
+const nombres=Object.keys(REC).sort((a,b)=>a.localeCompare(b,'es'));
+
+// ─── MACRO ───
+function previewMacro(){
+  const dia=document.getElementById('mDia').value;
+  const srv=document.getElementById('mSrv').value;
+  const diet=document.getElementById('mDieta').value;
+  const rec=(MACRO[srv]&&MACRO[srv][diet]&&MACRO[srv][diet][dia])||[];
+  const el=document.getElementById('macro-preview');
+  if(!rec.length){el.style.display='none';return;}
+  el.style.display='block';
+  el.innerHTML=rec.map(r=>{const d=REC[r];return`<div class="mi"><span class="pill ${TPILL[d?d.t:'']||'pill pill-ot'}" style="font-size:10px">${d?d.t:'?'}</span><span>${r}</span>${!d?'<span style="font-size:10px;color:var(--rojo)">⚠ sin receta</span>':''}</div>`;}).join('');
+}
+
+function cargarDesdeMacro(){
+  const dia=document.getElementById('mDia').value;
+  const srv=document.getElementById('mSrv').value;
+  const diet=document.getElementById('mDieta').value;
+  const por=parseInt(document.getElementById('mPor').value)||1;
+  const rec=(MACRO[srv]&&MACRO[srv][diet]&&MACRO[srv][diet][dia])||[];
+  if(!rec.length){mostrarNotif('No hay platos configurados para esta combinación','warn');return;}
+  const conRec=rec.filter(r=>REC[r]);
+  const sinRec=rec.filter(r=>!REC[r]);
+  if(!conRec.length){mostrarNotif('Ninguna receta del macro tiene ingredientes cargados','warn');return;}
+  const ings=[];
+  conRec.forEach(r=>REC[r].i.forEach(ing=>ings.push({...ing})));
+  items.push({dia,srv,diet,nombre:conRec.join(' + '),recetas:conRec,ingredientes:ings,porciones:por,id:Date.now(),esCombo:true,desdeMacro:true});
+  renderLista();
+  let msg=`✓ ${conRec.length} platos cargados — ${DIETAS[diet]}, ${dia} ${srv}`;
+  if(sinRec.length) msg+=`. Sin receta: ${sinRec.join(', ')}`;
+  mostrarNotif(msg);
+}
+
+function mostrarNotif(msg,tipo){
+  const el=document.getElementById('notif');
+  el.textContent=msg;
+  el.style.background=tipo==='warn'?'#fef9c3':'#dcfce7';
+  el.style.color=tipo==='warn'?'#854d0e':'#166534';
+  el.style.borderColor=tipo==='warn'?'#fde047':'#bbf7d0';
+  el.style.border='1px solid';
+  el.className='notif show';
+  setTimeout(()=>el.className='notif',5000);
+}
+
+// ─── COMBO MANUAL ───
+function filtrarC(){
+  const q=document.getElementById('cRec').value.toLowerCase();
+  const res=q?nombres.filter(n=>n.toLowerCase().includes(q)):nombres;
+  const drop=document.getElementById('cdrop');
+  drop.innerHTML=res.slice(0,25).map(n=>`<div class="dopt" onmousedown="selRecC('${n.replace(/'/g,"\\'")}')"><b>${n}</b><small>${REC[n].t}</small></div>`).join('');
+  drop.className=res.length?'drop vis':'drop';
+}
+function closeDrop(id){document.getElementById(id).className='drop';}
+function selRecC(n){recSelC=n;document.getElementById('cRec').value=n;closeDrop('cdrop');}
+function addRecetaAlCombo(){
+  const nombre=recSelC||document.getElementById('cRec').value.trim();
+  if(!REC[nombre]){alert('Seleccioná una receta válida');return;}
+  if(!comboRecetas.includes(nombre))comboRecetas.push(nombre);
+  recSelC='';document.getElementById('cRec').value='';
+  renderComboActual();
+}
+function quitarRecetaDeCombo(n){comboRecetas=comboRecetas.filter(r=>r!==n);renderComboActual();}
+function limpiarCombo(){comboRecetas=[];renderComboActual();}
+function renderComboActual(){
+  const el=document.getElementById('combo-recetas-actual');
+  if(!comboRecetas.length){el.innerHTML='<div style="font-size:12px;color:var(--gris);font-style:italic;padding:4px 0">Sin recetas en el combo</div>';return;}
+  el.innerHTML=comboRecetas.map(n=>`<div style="display:flex;align-items:center;gap:8px;background:var(--fondo);border:1px solid var(--borde);border-radius:6px;padding:6px 10px;margin-bottom:4px"><span class="${TPILL[REC[n].t]||'pill pill-ot'}" style="font-size:11px">${REC[n].t}</span><span style="flex:1;font-size:13px">${n}</span><button class="del" onclick="quitarRecetaDeCombo('${n.replace(/'/g,"\\'")}')">×</button></div>`).join('');
+}
+function confirmarCombo(){
+  if(!comboRecetas.length){alert('Agregá al menos una receta');return;}
+  const dia=document.getElementById('cDia').value;
+  const srv=document.getElementById('cSrv').value;
+  const diet=document.getElementById('cDieta').value;
+  const por=parseInt(document.getElementById('cPor').value)||1;
+  const ings=[];
+  comboRecetas.forEach(r=>REC[r].i.forEach(ing=>ings.push({...ing})));
+  items.push({dia,srv,diet,nombre:comboRecetas.join(' + '),recetas:[...comboRecetas],ingredientes:ings,porciones:por,id:Date.now(),esCombo:true});
+  comboRecetas=[];renderComboActual();renderLista();
+  mostrarNotif('✓ Combo agregado al menú');
+}
+
+// ─── PLANTILLAS ───
+function guardarPlantilla(){
+  if(!comboRecetas.length){alert('Armá un combo primero para guardarlo');return;}
+  const nombre=prompt('Nombre para esta plantilla:');
+  if(!nombre)return;
+  plantillas.push({nombre,recetas:[...comboRecetas],id:Date.now()});
+  renderPlantillas();
+  mostrarNotif(`✓ Plantilla "${nombre}" guardada`);
+}
+function cargarPlantilla(id){
+  const p=plantillas.find(x=>x.id===id);if(!p)return;
+  const dia=document.getElementById('cDia').value;
+  const srv=document.getElementById('cSrv').value;
+  const diet=document.getElementById('cDieta').value;
+  const por=parseInt(document.getElementById('cPor').value)||30;
+  const ings=[];
+  p.recetas.filter(r=>REC[r]).forEach(r=>REC[r].i.forEach(ing=>ings.push({...ing})));
+  items.push({dia,srv,diet,nombre:p.recetas.join(' + '),recetas:[...p.recetas],ingredientes:ings,porciones:por,id:Date.now(),esCombo:true});
+  renderLista();
+  mostrarNotif(`✓ Plantilla "${p.nombre}" → ${DIETAS[diet]}, ${dia} ${srv}, ${por} porciones`);
+  goTab('menu');
+}
+function borrarPlantilla(id){plantillas=plantillas.filter(x=>x.id!==id);renderPlantillas();}
+function limpiarTodasPlantillas(){if(confirm('¿Borrar todas las plantillas?')){plantillas=[];renderPlantillas();}}
+function renderPlantillas(){
+  const el=document.getElementById('plantillas-lista');
+  if(!plantillas.length){el.innerHTML='<div class="empty">Sin plantillas — armá un combo y guardalo desde el Menú</div>';return;}
+  el.innerHTML=plantillas.map(p=>`<div class="plantilla-card"><div class="pc-name"><strong>${p.nombre}</strong><small>${p.recetas.join(' · ')}</small></div><button class="btn btn-g" style="font-size:12px;padding:5px 12px" onclick="cargarPlantilla(${p.id})">↓ Usar</button><button class="del" onclick="borrarPlantilla(${p.id})">×</button></div>`).join('');
+}
+
+// ─── LISTA MENÚ ───
+function borrar(id){items=items.filter(i=>i.id!==id);renderLista();}
+function upd(id,val){const it=items.find(i=>i.id===id);if(it)it.porciones=val;}
+function renderLista(){
+  const el=document.getElementById('lista');
+  if(!items.length){el.innerHTML='<div class="empty">Cargá platos desde el macro o armá un combo manual</div>';return;}
+  const grupos={};
+  items.forEach(it=>{const k=`${it.dia} · ${it.srv}`;if(!grupos[k])grupos[k]=[];grupos[k].push(it);});
+  el.innerHTML=Object.entries(grupos).map(([g,arr])=>`
+    <div style="margin-bottom:12px">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--gris);padding:4px 0 4px 2px">${g}</div>
+      <div class="ilist">
+        ${arr.map(it=>`<div class="irow" style="grid-template-columns:auto 1fr auto auto auto">
+          <span class="dtag">${DIETAS[it.diet]||it.diet}</span>
+          <div>
+            <div style="font-size:13px;font-weight:500">${it.desdeMacro?'⚡ ':'🍽 '}${it.nombre.length>70?it.nombre.substring(0,67)+'…':it.nombre}</div>
+            <div style="margin-top:2px">${it.recetas.map(r=>`<span class="${TPILL[REC[r]?REC[r].t:'']||'pill pill-ot'}" style="font-size:10px;margin-right:3px">${r.length>28?r.substring(0,26)+'…':r}</span>`).join('')}</div>
+          </div>
+          <input class="porinp" type="number" min="1" value="${it.porciones}" onchange="upd(${it.id},parseInt(this.value)||1)">
+          <span style="font-size:11px;color:var(--gris)">porc.</span>
+          <button class="del" onclick="borrar(${it.id})">×</button>
+        </div>`).join('')}
+      </div>
+    </div>`).join('');
+}
+
+// ─── MERMAS ───
+function addMerma(){
+  const ing=document.getElementById('mIng').value.trim();
+  const pct=parseFloat(document.getElementById('mPct').value)||0;
+  if(!ing)return;
+  mermas[ing.toLowerCase()]=pct;
+  document.getElementById('mIng').value='';document.getElementById('mPct').value='';
+  renderMermas();
+}
+function addMR(ing,pct){mermas[ing.toLowerCase()]=pct;renderMermas();}
+function borrarMerma(k){delete mermas[k];renderMermas();}
+function renderMermas(){
+  const el=document.getElementById('mermaList');
+  const keys=Object.keys(mermas);
+  if(!keys.length){el.innerHTML='<div class="empty">Sin mermas</div>';return;}
+  el.innerHTML=`<div class="ilist">${keys.map(k=>`<div class="irow" style="grid-template-columns:1fr auto auto"><span>${k.charAt(0).toUpperCase()+k.slice(1)}</span><input class="porinp" type="number" min="0" max="99" value="${mermas[k]}" onchange="mermas['${k}']=parseFloat(this.value)||0"><button class="del" onclick="borrarMerma('${k}')">×</button></div>`).join('')}</div>`;
+}
+
+// ─── PROVEEDORES ───
+function addProv(){
+  const n=document.getElementById('pNombre').value.trim();
+  const g=document.getElementById('pGrupo').value.trim();
+  const d=document.getElementById('pDias').value.trim();
+  const p=document.getElementById('pPerec').value;
+  if(!n||!g)return;
+  proveedores.push({nombre:n,palabras:g.toLowerCase().split(',').map(x=>x.trim()),dias:d,perecedero:p==='si',id:Date.now()});
+  document.getElementById('pNombre').value='';document.getElementById('pGrupo').value='';document.getElementById('pDias').value='';
+  renderProveedores();renderCronograma();
+}
+function borrarProv(id){proveedores=proveedores.filter(p=>p.id!==id);renderProveedores();renderCronograma();}
+function getProv(n){const nl=n.toLowerCase();return proveedores.find(p=>p.palabras.some(pal=>nl.includes(pal)))||null;}
+function renderProveedores(){
+  const el=document.getElementById('provList');
+  if(!proveedores.length){el.innerHTML='<div class="empty">Sin proveedores</div>';return;}
+  el.innerHTML=`<div class="ilist">${proveedores.map(p=>`<div class="irow" style="grid-template-columns:auto 1fr auto auto auto"><span style="font-weight:600">${p.nombre}</span><span style="color:var(--gris)">${p.palabras.join(', ')}</span><span style="font-size:12px">${p.dias||'—'}</span><span class="badge ${p.perecedero?'b-u':'b-g'}">${p.perecedero?'Pereced.':'No pereced.'}</span><button class="del" onclick="borrarProv(${p.id})">×</button></div>`).join('')}</div>`;
+}
+function renderCronograma(){
+  const tots=calcTotales();
+  if(!tots.length||!proveedores.length){document.getElementById('cronograma').innerHTML='<div class="empty">Cargá proveedores y menú</div>';return;}
+  const grupos={};
+  tots.forEach(r=>{const p=getProv(r.nombre);const k=p?p.nombre:'Sin proveedor';if(!grupos[k])grupos[k]={p,items:[]};grupos[k].items.push(r);});
+  document.getElementById('cronograma').innerHTML=Object.entries(grupos).map(([g,{p,items}])=>`<div style="margin-bottom:12px"><div style="font-size:12px;font-weight:600;margin-bottom:6px">${g}${p?` <span class="prov-badge ${p.perecedero?'p':''}">Entrega: ${p.dias}</span>`:''}</div><div class="ilist">${items.slice(0,8).map(r=>`<div class="irow" style="grid-template-columns:1fr auto auto"><span>${r.nombre}</span><span class="num">${fmtNum(r.cantConMerma)}</span><span style="font-size:11px;color:var(--gris)">${r.u}</span></div>`).join('')}${items.length>8?`<div style="padding:6px 12px;font-size:11px;color:var(--gris)">... y ${items.length-8} más</div>`:''}</div></div>`).join('');
+}
+
+// ─── CÁLCULO ───
+function getMerma(n){const nl=n.toLowerCase();for(const[k,v] of Object.entries(mermas)){if(nl.includes(k))return v/100;}return 0;}
+function getUCat(u){u=u.toLowerCase().replace('.','');if(['g','gr','gramo','gramos','gs','kg'].includes(u))return 'g';if(['ml','cc','l','lt','lts'].includes(u))return 'ml';if(['unidad','unidades','un','bolsa','bolsas','sobre','sobres'].includes(u))return 'u';return 'o';}
+function calcTotales(){
+  const tot={};
+  items.forEach(it=>{
+    (it.ingredientes||[]).forEach(ing=>{
+      const cat=getUCat(ing.u);
+      const key=ing.i.toLowerCase().trim()+'|||'+cat;
+      if(!tot[key])tot[key]={nombre:ing.i,cat,u:ing.u,cant:0};
+      tot[key].cant+=ing.c*it.porciones;
+    });
+  });
+  return Object.values(tot).map(r=>{const m=getMerma(r.nombre);return{...r,merma:m,cantConMerma:r.cant*(1+m)};}).sort((a,b)=>a.nombre.localeCompare(b.nombre,'es'));
+}
+function fmtNum(n){if(n>=10000)return(n/1000).toFixed(1)+'k';if(n>=1)return(Math.round(n*10)/10).toLocaleString('es');return n.toFixed(2);}
+
+// ─── PEDIDO ───
+function setFiltro(btn){filtroU=btn.dataset.u;document.querySelectorAll('#filtroU .chip').forEach(b=>b.classList.remove('on'));btn.classList.add('on');renderPedido();}
+function setVista(btn){vista=btn.dataset.v;document.querySelectorAll('#vistaChips .chip').forEach(b=>b.classList.remove('on'));btn.classList.add('on');renderPedido();}
+function renderPedido(){
+  const tots=calcTotales();
+  const tp=items.reduce((s,i)=>s+i.porciones,0);
+  document.getElementById('sumCards').innerHTML=`<div class="scard"><strong>${items.length}</strong><span>Combos/platos</span></div><div class="scard"><strong>${tp}</strong><span>Porciones</span></div><div class="scard"><strong>${tots.length}</strong><span>Ingredientes</span></div>`;
+  const vis=filtroU==='todo'?tots:tots.filter(r=>r.cat===filtroU);
+  if(!vis.length){document.getElementById('resultado').innerHTML='<div class="empty">Sin ingredientes para mostrar</div>';return;}
+  const bc=c=>c==='g'?'b-g':c==='ml'?'b-ml':c==='u'?'b-u':'b-o';
+  if(vista==='consolidado'){
+    document.getElementById('resultado').innerHTML=`<div class="card" style="padding:0;overflow:hidden"><table><thead><tr><th>Ingrediente</th><th style="text-align:right">Receta</th><th style="text-align:right">Merma</th><th style="text-align:right">PEDIR</th><th>Unidad</th></tr></thead><tbody>${vis.map(r=>`<tr><td>${r.nombre}</td><td class="num-dim">${fmtNum(r.cant)}</td><td style="text-align:right;color:var(--rojo);font-size:12px;font-weight:500">${r.merma>0?'+'+Math.round(r.merma*100)+'%':'—'}</td><td class="num" style="font-size:15px;color:var(--azul)">${fmtNum(r.cantConMerma)}</td><td><span class="badge ${bc(r.cat)}">${r.u}</span></td></tr>`).join('')}</tbody></table></div><p style="font-size:12px;color:var(--gris);margin-top:8px;padding-left:2px">${vis.length} ingredientes</p>`;
+  } else {
+    const porDia={};
+    items.forEach(it=>{const k=`${it.dia} · ${it.srv}`;if(!porDia[k])porDia[k]=[];porDia[k].push(it);});
+    let html='';
+    for(const[dia,dItems] of Object.entries(porDia)){
+      const totDia={};
+      dItems.forEach(it=>{(it.ingredientes||[]).forEach(ing=>{const cat=getUCat(ing.u);const key=ing.i.toLowerCase().trim()+'|||'+cat;if(!totDia[key])totDia[key]={nombre:ing.i,cat,u:ing.u,cant:0};totDia[key].cant+=ing.c*it.porciones;});});
+      const rowsDia=Object.values(totDia).map(r=>{const m=getMerma(r.nombre);return{...r,merma:m,cantConMerma:r.cant*(1+m)};}).sort((a,b)=>a.nombre.localeCompare(b.nombre,'es'));
+      const visDia=filtroU==='todo'?rowsDia:rowsDia.filter(r=>r.cat===filtroU);
+      html+=`<div class="dia-sec"><div class="dia-title">${dia}</div><div class="card" style="padding:0;overflow:hidden"><table><thead><tr><th>Ingrediente</th><th style="text-align:right">Receta</th><th style="text-align:right">PEDIR</th><th>Unidad</th><th>Proveedor</th></tr></thead><tbody>${visDia.map(r=>{const p=getProv(r.nombre);return`<tr><td>${r.nombre}</td><td class="num-dim">${fmtNum(r.cant)}</td><td class="num" style="color:var(--azul)">${fmtNum(r.cantConMerma)}</td><td><span class="badge ${bc(r.cat)}">${r.u}</span></td><td>${p?`<span class="prov-badge ${p.perecedero?'p':''}">${p.nombre} · ${p.dias}</span>`:''}</td></tr>`;}).join('')}</tbody></table></div></div>`;
+    }
+    document.getElementById('resultado').innerHTML=html||'<div class="empty">Sin datos</div>';
+  }
+}
+
+// ─── EXPORT ───
+function copiar(){
+  const tots=calcTotales();
+  const txt='PEDIDO A DESPENSA — Sanatorio Allende Cerro\n'+new Date().toLocaleDateString('es-AR')+'\n\n'+tots.map(r=>`${r.nombre}: ${fmtNum(r.cantConMerma)} ${r.u}${r.merma>0?' (+'+Math.round(r.merma*100)+'% merma)':''}`).join('\n');
+  navigator.clipboard.writeText(txt).then(()=>{
+    const b=document.getElementById('btnCopiar');const orig=b.innerHTML;
+    b.innerHTML='✓ Copiado';b.style.color='var(--verde)';
+    setTimeout(()=>{b.innerHTML=orig;b.style.color='';},2000);
+  });
+}
+function exportCSV(){
+  const tots=calcTotales();
+  const csv='\uFEFFIngrediente,Cantidad receta,Merma %,Cantidad a pedir,Unidad,Proveedor,Días entrega\n'+tots.map(r=>{const p=getProv(r.nombre);return`"${r.nombre}",${fmtNum(r.cant)},${Math.round(r.merma*100)},${fmtNum(r.cantConMerma)},"${r.u}","${p?p.nombre:''}","${p?p.dias:''}"`}).join('\n');
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download='pedido_despensa_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+}
+
+// ─── TABS ───
+function goTab(t){
+  const tabs=['menu','plantillas','pedido','proveedores','mermas'];
+  document.querySelectorAll('.tab').forEach((b,i)=>b.className='tab'+(tabs[i]===t?' on':''));
+  document.querySelectorAll('.sec').forEach(s=>s.className='sec');
+  document.getElementById('tab-'+t).className='sec on';
+  if(t==='pedido')renderPedido();
+  if(t==='proveedores'){renderProveedores();renderCronograma();}
+  if(t==='mermas')renderMermas();
+  if(t==='plantillas')renderPlantillas();
+}
+
+previewMacro();
+renderLista();
+</script>
+</body></html>
