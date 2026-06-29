@@ -119,6 +119,7 @@ tr:hover td{background:var(--fondo)}
   <button class="tab" onclick="goTab('pedido')">3 · Pedido</button>
   <button class="tab" onclick="goTab('proveedores')">4 · Proveedores</button>
   <button class="tab" onclick="goTab('mermas')">5 · Mermas</button>
+  <button class="tab" onclick="goTab('cargar-recetas')">6 · Cargar Recetas</button>
 </div>
 
 <!-- ═══ TAB 1: MENU ═══ -->
@@ -302,6 +303,21 @@ tr:hover td{background:var(--fondo)}
     </div>
   </div>
 </div>
+</div>
+
+<div id="tab-cargar-recetas" class="sec">
+  <div class="card">
+    <div class="card-title">📂 Importar o Actualizar Recetas desde CSV</div>
+    <p style="font-size:12px;color:var(--gris);margin-bottom:12px;">
+      Selecciona un archivo CSV exportado de tus recetas. Si el nombre ya existe en la base de datos, se actualizarán sus ingredientes; si es nuevo, se agregará automáticamente.
+    </p>
+    <div class="form-row" style="background: var(--fondo); padding: 20px; border-radius: var(--radio); border: 2px dashed var(--borde); justify-content: center; flex-direction: column; align-items: center; gap: 10px; text-align: center;">
+      <input type="file" id="fileRecetas" accept=".csv,.txt" style="display:none" onchange="procesarArchivoRecetas(this)">
+      <button class="btn btn-a" onclick="document.getElementById('fileRecetas').click()">Seleccionar Archivo CSV</button>
+      <span id="archivoNombre" style="font-size:12px; color:var(--gris);">Ningún archivo seleccionado</span>
+    </div>
+    <div id="logCarga" style="margin-top:12px; font-size:12px; max-height:200px; overflow-y:auto; padding:8px; display:none; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:6px; color:#166534;"></div>
+  </div>
 </div>
 
 <script>
@@ -694,6 +710,12 @@ const REC = {
 "Vitina":{t:"GU",i:[{i:"Vitina cruda",c:25,u:"g"},{i:"Caldo",c:200,u:"ml"}]},
 };
 
+// --- LEER RECETAS EXTERNAS GUARDADAS EN EL NAVEGADOR ---
+const recetasGuardadas = JSON.parse(localStorage.getItem('SA_RECETAS_EXT'));
+if (recetasGuardadas) {
+  Object.assign(REC, recetasGuardadas);
+}
+
 const DIETAS={g:'General',l:'Liviano',lc:'Liv. c/carne',n:'Niño',a:'Adolescente',b1:'Bebé 1',b2:'Bebé 2',dbt:'DBT',bcb:'BCB',veg:'Vegetariano',cel:'Celíaco',ast:'Astringente',sl:'Súper liviano',ids4:'IDSSI 4',ids5:'IDSSI 5',ids6:'IDSSI 6',ids7:'IDSSI 7',exc:'Excepción'};
 const TPILL={PP:'pill pill-pp',GU:'pill pill-gu',EN:'pill pill-en',SO:'pill pill-so',PO:'pill pill-po'};
 const TPILL_MI={PP:'mi-pp',GU:'mi-gu',EN:'mi-en',SO:'mi-so',PO:'mi-po'};
@@ -946,7 +968,7 @@ function exportCSV(){
 
 // ─── TABS ───
 function goTab(t){
-  const tabs=['menu','plantillas','pedido','proveedores','mermas'];
+  const tabs=['menu','plantillas','pedido','proveedores','mermas','cargar-recetas'];
   document.querySelectorAll('.tab').forEach((b,i)=>b.className='tab'+(tabs[i]===t?' on':''));
   document.querySelectorAll('.sec').forEach(s=>s.className='sec');
   document.getElementById('tab-'+t).className='sec on';
@@ -958,5 +980,93 @@ function goTab(t){
 
 previewMacro();
 renderLista();
+
+// ─── PROCESADOR DE ARCHIVOS DE RECETAS (CSV) ───
+function procesarArchivoRecetas(input) {
+  const file = input.files[0];
+  if (!file) return;
+  
+  document.getElementById('archivoNombre').innerText = file.name;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    analizarYGuardarRecetas(e.target.result, file.name);
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function analizarYGuardarRecetas(texto, fileName) {
+  const lineas = texto.split(/\r?\n/);
+  let nombreReceta = "";
+  let ingredientes = [];
+  
+  // Captura el título desde la celda A1 (ej: MUSLITO DE POLLO AL HORNO/LASAÑA Y PAPAS)
+  if (lineas.length > 0) {
+    let primeraLinea = lineas[0].split(',')[0];
+    if (primeraLinea && primeraLinea.trim() !== '') {
+      nombreReceta = primeraLinea.split('/')[0].trim();
+    }
+  }
+  
+  if (!nombreReceta) {
+    nombreReceta = fileName.replace(/\.[^/.]+$/, "").split('_')[0].trim();
+  }
+  
+  // Normaliza el nombre (Primera letra Mayúscula, resto minúsculas)
+  nombreReceta = nombreReceta.charAt(0).toUpperCase() + nombreReceta.slice(1).toLowerCase();
+
+  for (let i = 1; i < lineas.length; i++) {
+    let linea = lineas[i].trim();
+    if (!linea) continue;
+    
+    let cols = linea.split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+    let col0 = cols[0] ? cols[0].toLowerCase() : '';
+    
+    // Ignorar líneas vacías, títulos de secciones o la fecha de actualización
+    if (!cols[0] || col0 === 'ingredientes' || col0.startsWith('guarnición') || col0.startsWith('fecha')) {
+      continue;
+    }
+    
+    let ing = cols[0];
+    let cantStr = cols[2];
+    let med = cols[3] || 'g';
+    
+    if (ing && cantStr) {
+      // Si dice c/n (cantidad necesaria) le ponemos 0.1 para que no rompa los cálculos matemáticos
+      let cantNum = cantStr.toLowerCase() === 'c/n' ? 0.1 : parseFloat(cantStr);
+      if (!isNaN(cantNum)) {
+        ingredientes.push({
+          i: ing.charAt(0).toUpperCase() + ing.slice(1).toLowerCase(),
+          c: cantNum,
+          u: med.toLowerCase() === 'c/n' ? 'u' : med
+        });
+      }
+    }
+  }
+
+  if (nombreReceta && ingredientes.length > 0) {
+    let esNueva = !REC[nombreReceta];
+    
+    // Guardar en la base de datos temporal en ejecución
+    REC[nombreReceta] = { t: "PP", i: ingredientes };
+    
+    // Guardar permanentemente en el navegador (Local Storage)
+    let recetasExt = JSON.parse(localStorage.getItem('SA_RECETAS_EXT')) || {};
+    recetasExt[nombreReceta] = { t: "PP", i: ingredientes };
+    localStorage.setItem('SA_RECETAS_EXT', JSON.stringify(recetasExt));
+    
+    // Notificación en pantalla
+    const log = document.getElementById('logCarga');
+    log.style.display = 'block';
+    log.innerHTML = `<strong>¡Procesado con éxito!</strong><br>
+                    • Receta: <code>${nombreReceta}</code><br>
+                    • Ingredientes registrados: ${ingredientes.length}<br>
+                    • Estado: ${esNueva ? '✨ Agregada como nueva' : '🔄 Actualizada (Ya existía)'}`;
+    
+    input.value = ""; // Limpiar input
+  } else {
+    alert("No se pudo interpretar el archivo. Asegúrate de subir el archivo guardado como formato CSV.");
+  }
+}
+
 </script>
 </body></html>
