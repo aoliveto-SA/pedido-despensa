@@ -828,7 +828,7 @@ if (recetasGuardadas) {
 
 const DIETAS={g:'General',l:'Liviano',lc:'Liv. c/carne',n:'Niño',a:'Adolescente',b1:'Bebé 1',b2:'Bebé 2',dbt:'DBT',bcb:'BCB',veg:'Vegetariano',cel:'Celíaco',ast:'Astringente',sl:'Súper liviano',ids4:'IDSSI 4',ids5:'IDSSI 5',ids6:'IDSSI 6',ids7:'IDSSI 7',exc:'Excepción'};
 
-// Mix base de sopa: ingredientes fijos de una bolsa de 10kg, rinde ~50 porciones.
+// Mix base de sopa: ingredientes fijos de una bolsa de 5kg, rinde ~40 porciones.
 // Cualquier receta de tipo "SO" (sopa) suma este mix además de sus ingredientes extra propios.
 const SOPA_MIX_BASE=[
   {i:"Zanahoria",c:2.5,u:"kg"},
@@ -840,7 +840,7 @@ const SOPA_MIX_BASE=[
   {i:"Nabo",c:0.8,u:"kg"},
   {i:"Apio",c:0.5,u:"kg"},
 ];
-const SOPA_PORCIONES_POR_BOLSA=50;
+const SOPA_PORCIONES_POR_BOLSA=40;
 
 const TPILL={PP:'pill pill-pp',GU:'pill pill-gu',EN:'pill pill-en',SO:'pill pill-so',PO:'pill pill-po'};
 const TPILL_MI={PP:'mi-pp',GU:'mi-gu',EN:'mi-en',SO:'mi-so',PO:'mi-po'};
@@ -1443,7 +1443,7 @@ function renderPedido(){
 
     let htmlFinal = '';
     if(bolsas > 0) {
-      htmlFinal += `<div style="margin:10px 0 20px;padding:12px 16px;background:#eff6ff;border:1px solid var(--azul);border-radius:8px;font-size:16px;font-weight:bold;color:var(--azul-txt)">🍲 Mix de sopa: ${bolsas} ${bolsas===1?'bolsa':'bolsas'} (10kg c/u)</div>`;
+      htmlFinal += `<div style="margin:10px 0 20px;padding:12px 16px;background:#eff6ff;border:1px solid var(--azul);border-radius:8px;font-size:16px;font-weight:bold;color:var(--azul-txt)">🍲 Mix de sopa: ${bolsas} ${bolsas===1?'bolsa':'bolsas'} (5kg c/u)</div>`;
     }
     if(listaOtros.length > 0) {
       htmlFinal += generarTablaHTML(listaOtros, true, false);
@@ -1499,7 +1499,7 @@ function renderPedido(){
 
         html += `<div class="dia-sec" style="margin-top:20px;"><div class="dia-title" style="font-size:14px;font-weight:bold;color:var(--texto);border-bottom:3px solid var(--gris);">📅 ${dia}</div>`;
         if(bolsasDia > 0) {
-          html += `<div style="margin:10px 0;padding:10px 14px;background:#eff6ff;border:1px solid var(--azul);border-radius:8px;font-size:15px;font-weight:bold;color:var(--azul-txt)">🍲 Mix de sopa: ${bolsasDia} ${bolsasDia===1?'bolsa':'bolsas'} (10kg c/u)</div>`;
+          html += `<div style="margin:10px 0;padding:10px 14px;background:#eff6ff;border:1px solid var(--azul);border-radius:8px;font-size:15px;font-weight:bold;color:var(--azul-txt)">🍲 Mix de sopa: ${bolsasDia} ${bolsasDia===1?'bolsa':'bolsas'} (5kg c/u)</div>`;
         }
         if(otrosDia.length > 0) {
           html += generarTablaHTML(otrosDia, false, true);
@@ -1592,7 +1592,7 @@ function exportXLSXPorDia(){
     });
 
     const ws = XLSX.utils.aoa_to_sheet(
-      bolsasDia>0 ? [[`🍲 Mix de sopa: ${bolsasDia} ${bolsasDia===1?'bolsa':'bolsas'} (10kg c/u)`],[]] : []
+      bolsasDia>0 ? [[`🍲 Mix de sopa: ${bolsasDia} ${bolsasDia===1?'bolsa':'bolsas'} (5kg c/u)`],[]] : []
     );
     XLSX.utils.sheet_add_json(ws, datos, { origin: bolsasDia>0 ? -1 : 0 });
     ws['!cols']=[{wch:30},{wch:14},{wch:9},{wch:15},{wch:8},{wch:20},{wch:12}];
