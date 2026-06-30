@@ -1178,20 +1178,17 @@ function renderPedido(){
   };
 
   if(vista==='consolidado'){
-    const listaSopas = vis.filter(r => r.esSopa);
     const listaOtros = vis.filter(r => !r.esSopa);
 
     let htmlFinal = '';
-    if(listaSopas.length > 0) {
-      htmlFinal += `<div class="dia-title" style="color:var(--azul-txt);border-bottom:2px solid var(--azul);margin-top:15px;margin-bottom:10px;font-size:14px;font-weight:bold">🍲 INGREDIENTES PARA SOPAS ${bolsas>0?`<span style="font-size:12px;font-weight:500;color:var(--gris)">— ${bolsas} ${bolsas===1?'bolsa':'bolsas'} de mix base (10kg c/u)</span>`:''}</div>`;
-      htmlFinal += generarTablaHTML(listaSopas, true, false);
+    if(bolsas > 0) {
+      htmlFinal += `<div style="margin:10px 0 20px;padding:12px 16px;background:#eff6ff;border:1px solid var(--azul);border-radius:8px;font-size:16px;font-weight:bold;color:var(--azul-txt)">🍲 Mix de sopa: ${bolsas} ${bolsas===1?'bolsa':'bolsas'} (10kg c/u)</div>`;
     }
     if(listaOtros.length > 0) {
-      htmlFinal += `<div class="dia-title" style="color:var(--verde-txt);border-bottom:2px solid var(--verde);margin-top:15px;margin-bottom:10px;font-size:14px;font-weight:bold">🍽️ DEMÁS MENÚS E INGREDIENTES</div>`;
       htmlFinal += generarTablaHTML(listaOtros, true, false);
     }
 
-    document.getElementById('resultado').innerHTML = htmlFinal + `<p style="font-size:12px;color:var(--gris);margin-top:8px;padding-left:2px">${vis.length} ingredientes en total</p>`;
+    document.getElementById('resultado').innerHTML = htmlFinal + `<p style="font-size:12px;color:var(--gris);margin-top:8px;padding-left:2px">${listaOtros.length} ingredientes en total</p>`;
   } else {
     const porDia={};
     items.forEach(it=>{const k=`${it.dia} · ${it.srv}`;if(!porDia[k])porDia[k]=[];porDia[k].push(it);});
@@ -1239,12 +1236,10 @@ function renderPedido(){
         const otrosDia = visDia.filter(r => !r.esSopa);
 
         html += `<div class="dia-sec" style="margin-top:20px;"><div class="dia-title" style="font-size:14px;font-weight:bold;color:var(--texto);border-bottom:3px solid var(--gris);">📅 ${dia}</div>`;
-        if(sopasDia.length > 0) {
-          html += `<div style="font-size:12px;font-weight:bold;color:var(--azul-txt);margin:10px 0 5px 0;">[SOPAS]${bolsasDia>0?` — ${bolsasDia} ${bolsasDia===1?'bolsa':'bolsas'} de mix base`:''}</div>`;
-          html += generarTablaHTML(sopasDia, false, true);
+        if(bolsasDia > 0) {
+          html += `<div style="margin:10px 0;padding:10px 14px;background:#eff6ff;border:1px solid var(--azul);border-radius:8px;font-size:15px;font-weight:bold;color:var(--azul-txt)">🍲 Mix de sopa: ${bolsasDia} ${bolsasDia===1?'bolsa':'bolsas'} (10kg c/u)</div>`;
         }
         if(otrosDia.length > 0) {
-          html += `<div style="font-size:12px;font-weight:bold;color:var(--verde-txt);margin:10px 0 5px 0;">[OTROS PLATOS]</div>`;
           html += generarTablaHTML(otrosDia, false, true);
         }
         html += `</div>`;
