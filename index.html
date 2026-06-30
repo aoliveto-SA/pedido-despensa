@@ -752,9 +752,6 @@ const REC = {
 "Vitina":{t:"GU",i:[{i:"Vitina cruda",c:25,u:"g"},{i:"Caldo",c:200,u:"ml"}]},
 };
 
-// --- RECETAS BASE (antes de cargar externas) ---
-const REC_BASE_NOMBRES = new Set(Object.keys(REC));
-
 // --- LEER RECETAS EXTERNAS GUARDADAS EN EL NAVEGADOR ---
 const recetasGuardadas = JSON.parse(localStorage.getItem('SA_RECETAS_EXT'));
 if (recetasGuardadas) {
@@ -1504,32 +1501,25 @@ function renderGestorRecetas() {
   const TIPO_LABEL = {PP:'Plato',GU:'Guarnición',EN:'Entrada',SO:'Sopa',PO:'Postre'};
 
   el.innerHTML = filtrados.map(([nombre, rec]) => {
-    const esBase = REC_BASE_NOMBRES.has(nombre);
     const sel = recSeleccionadas.has(nombre);
     const pillClass = TIPOS[rec.t] || 'pill-ot';
-    return `<div class="irow" style="grid-template-columns:28px 1fr auto auto auto;gap:8px;align-items:center;${sel?'background:#fef2f2;':''}" id="recrow-${CSS.escape(nombre)}">
-      <input type="checkbox" ${sel?'checked':''} ${esBase?'disabled title="Receta base — no se puede eliminar"':''}
+    return `<div class="irow" style="grid-template-columns:28px 1fr auto auto auto;gap:8px;align-items:center;${sel?'background:#fef2f2;':{}}">
+      <input type="checkbox" ${sel?'checked':''}
         onchange="toggleRecSel('${nombre.replace(/'/g,"\\'")}')"
-        style="width:16px;height:16px;accent-color:var(--rojo);cursor:${esBase?'not-allowed':'pointer'}">
-      <div>
-        <span style="font-size:13px;font-weight:500">${nombre}</span>
-        ${esBase?'<span style="font-size:10px;color:var(--gris);margin-left:6px">base</span>':''}
-      </div>
+        style="width:16px;height:16px;accent-color:var(--rojo);cursor:pointer">
+      <span style="font-size:13px;font-weight:500">${nombre}</span>
       <span class="pill ${pillClass}" style="font-size:10px">${TIPO_LABEL[rec.t]||rec.t}</span>
       <span style="font-size:11px;color:var(--gris);white-space:nowrap">${rec.i.length} ing.</span>
       <button class="del" title="Eliminar esta receta"
-        ${esBase?'disabled style="color:#ddd;cursor:not-allowed"':'style="color:#fca5a5" onmouseenter="this.style.color=\'var(--rojo)\'" onmouseleave="this.style.color=\'#fca5a5\'"'}
-        onclick="${esBase?'alert(\'Las recetas base no se pueden eliminar desde aquí.\')':'eliminarReceta(\''+nombre.replace(/'/g,"\\'")+'\')'}">×</button>
+        style="color:#fca5a5" onmouseenter="this.style.color='var(--rojo)'" onmouseleave="this.style.color='#fca5a5'"
+        onclick="eliminarReceta('${nombre.replace(/'/g,"\\'")}')">×</button>
     </div>`;
   }).join('');
 }
 
 function toggleRecSel(nombre) {
-  if (recSeleccionadas.has(nombre)) {
-    recSeleccionadas.delete(nombre);
-  } else {
-    recSeleccionadas.add(nombre);
-  }
+  if (recSeleccionadas.has(nombre)) recSeleccionadas.delete(nombre);
+  else recSeleccionadas.add(nombre);
   renderGestorRecetas();
 }
 
@@ -1539,26 +1529,17 @@ function seleccionarTodasRec() {
   const hayAlgunaSeleccionada = [...recSeleccionadas].some(n =>
     (!q || n.toLowerCase().includes(q)) && (!tipoF || REC[n]?.t === tipoF)
   );
-  // Si ya hay algunas seleccionadas en la vista actual → deseleccionar; si no → seleccionar todas (no-base)
   Object.keys(REC).forEach(nombre => {
     const pasaNombre = !q || nombre.toLowerCase().includes(q);
     const pasaTipo = !tipoF || REC[nombre]?.t === tipoF;
     if (!pasaNombre || !pasaTipo) return;
-    if (REC_BASE_NOMBRES.has(nombre)) return; // no tocar base
-    if (hayAlgunaSeleccionada) {
-      recSeleccionadas.delete(nombre);
-    } else {
-      recSeleccionadas.add(nombre);
-    }
+    if (hayAlgunaSeleccionada) recSeleccionadas.delete(nombre);
+    else recSeleccionadas.add(nombre);
   });
   renderGestorRecetas();
 }
 
 function eliminarReceta(nombre) {
-  if (REC_BASE_NOMBRES.has(nombre)) {
-    alert('Las recetas base no se pueden eliminar desde aquí.');
-    return;
-  }
   if (!confirm(`¿Eliminar la receta "${nombre}"?\nEsta acción no se puede deshacer.`)) return;
   delete REC[nombre];
   recSeleccionadas.delete(nombre);
@@ -1568,11 +1549,8 @@ function eliminarReceta(nombre) {
 }
 
 function eliminarSeleccionadas() {
-  const aEliminar = [...recSeleccionadas].filter(n => !REC_BASE_NOMBRES.has(n));
-  if (!aEliminar.length) {
-    alert('No hay recetas importadas seleccionadas para eliminar.\n(Las recetas base no se pueden eliminar.)');
-    return;
-  }
+  const aEliminar = [...recSeleccionadas].filter(n => REC[n]);
+  if (!aEliminar.length) { alert('No hay recetas seleccionadas.'); return; }
   if (!confirm(`¿Eliminar ${aEliminar.length} receta${aEliminar.length>1?'s':''}?\n\n${aEliminar.slice(0,10).join('\n')}${aEliminar.length>10?'\n...y '+(aEliminar.length-10)+' más':''}\n\nEsta acción no se puede deshacer.`)) return;
   aEliminar.forEach(n => { delete REC[n]; recSeleccionadas.delete(n); });
   persistirRecetasExt();
