@@ -1233,7 +1233,7 @@ function calcCronograma(){
       const fechaEntrega=ov.entrega?parseISODate(ov.entrega):entregaCalc;
       const fechaPed=ov.pedido?parseISODate(ov.pedido):pedidoCalc;
       filas.push({
-        key,dia,fechaNecesaria,nombre:r.nombre,cant:r.cantConMerma,u:r.u,esSopa:r.esSopa,
+        key,dia,fechaNecesaria,nombre:r.nombre,cant:Math.ceil(r.cantConMerma),u:r.u,esSopa:r.esSopa,
         proveedor:prov,fechaEntrega,fechaPedido:fechaPed,
         manualEntrega:!!ov.entrega,manualPedido:!!ov.pedido
       });
