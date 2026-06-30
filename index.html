@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Pedido a Despensa — Sanatorio Allende Cerro</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
 :root{
   --verde:#16a34a;--verde-claro:#dcfce7;--verde-txt:#166534;
@@ -308,16 +309,26 @@ tr:hover td{background:var(--fondo)}
 
 <div id="tab-cargar-recetas" class="sec">
   <div class="card">
-    <div class="card-title">📂 Importar o Actualizar Recetas desde CSV</div>
+    <div class="card-title">📂 Importar o Actualizar Recetas desde CSV o ZIP</div>
     <p style="font-size:12px;color:var(--gris);margin-bottom:12px;">
-      Selecciona un archivo CSV exportado de tus recetas. Si el nombre ya existe en la base de datos, se actualizarán sus ingredientes; si es nuevo, se agregará automáticamente.
+      Podés subir un <strong>CSV</strong> individual o un <strong>ZIP con varios CSVs</strong> a la vez (ej: desde Google Drive). Si la receta ya existe se actualiza; si es nueva se agrega. Los datos de menú, mermas, proveedores y plantillas se guardan automáticamente en el navegador.
     </p>
     <div class="form-row" style="background: var(--fondo); padding: 20px; border-radius: var(--radio); border: 2px dashed var(--borde); justify-content: center; flex-direction: column; align-items: center; gap: 10px; text-align: center;">
-      <input type="file" id="fileRecetas" accept=".csv,.txt" style="display:none" onchange="procesarArchivoRecetas(this)">
-      <button class="btn btn-a" onclick="document.getElementById('fileRecetas').click()">Seleccionar Archivo CSV</button>
+      <input type="file" id="fileRecetas" accept=".csv,.txt,.zip" style="display:none" onchange="procesarArchivoRecetas(this)">
+      <button class="btn btn-a" onclick="document.getElementById('fileRecetas').click()">Seleccionar CSV o ZIP</button>
       <span id="archivoNombre" style="font-size:12px; color:var(--gris);">Ningún archivo seleccionado</span>
     </div>
-    <div id="logCarga" style="margin-top:12px; font-size:12px; max-height:200px; overflow-y:auto; padding:8px; display:none; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:6px; color:#166534;"></div>
+    <div id="logCarga" style="margin-top:12px; font-size:12px; max-height:240px; overflow-y:auto; padding:8px; display:none; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:6px; color:#166534;"></div>
+  </div>
+  <div class="card" style="margin-top:0">
+    <div class="card-title">🗑 Limpiar datos guardados</div>
+    <p style="font-size:12px;color:var(--gris);margin-bottom:10px">Borrá el menú, mermas, proveedores o plantillas guardados en el navegador sin tocar las recetas.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-s" style="font-size:12px" onclick="if(confirm('¿Borrar todo el menú cargado?')){items=[];renderLista();guardarEstado();mostrarNotif('Menú borrado');}">Borrar menú</button>
+      <button class="btn btn-s" style="font-size:12px" onclick="if(confirm('¿Borrar todas las mermas?')){mermas={};renderMermas();guardarEstado();mostrarNotif('Mermas borradas');}">Borrar mermas</button>
+      <button class="btn btn-s" style="font-size:12px" onclick="if(confirm('¿Borrar todos los proveedores?')){proveedores=[];renderProveedores();renderCronograma();guardarEstado();mostrarNotif('Proveedores borrados');}">Borrar proveedores</button>
+      <button class="btn btn-s" style="font-size:12px" onclick="if(confirm('¿Borrar recetas extra importadas?')){localStorage.removeItem('SA_RECETAS_EXT');mostrarNotif('Recetas importadas borradas — recargá la página');}">Borrar recetas importadas</button>
+    </div>
   </div>
 </div>
 
@@ -736,9 +747,29 @@ const SOPA_PORCIONES_POR_BOLSA=30;
 const TPILL={PP:'pill pill-pp',GU:'pill pill-gu',EN:'pill pill-en',SO:'pill pill-so',PO:'pill pill-po'};
 const TPILL_MI={PP:'mi-pp',GU:'mi-gu',EN:'mi-en',SO:'mi-so',PO:'mi-po'};
 
-let items=[],mermas={},proveedores=[],plantillas=[],comboRecetas=[],recSelC='';
+// ─── PERSISTENCIA ───
+function cargarEstado() {
+  try {
+    const s = JSON.parse(localStorage.getItem('SA_ESTADO') || '{}');
+    return {
+      items: s.items || [],
+      mermas: s.mermas || {},
+      proveedores: s.proveedores || [],
+      plantillas: s.plantillas || [],
+    };
+  } catch(e) { return { items:[], mermas:{}, proveedores:[], plantillas:[] }; }
+}
+function guardarEstado() {
+  try {
+    localStorage.setItem('SA_ESTADO', JSON.stringify({ items, mermas, proveedores, plantillas }));
+  } catch(e) {}
+}
+
+const _e = cargarEstado();
+let items=_e.items, mermas=_e.mermas, proveedores=_e.proveedores, plantillas=_e.plantillas;
+let comboRecetas=[], recSelC='';
 let filtroU='todo',vista='consolidado';
-const nombres=Object.keys(REC).sort((a,b)=>a.localeCompare(b,'es'));
+function getNombres(){ return Object.keys(REC).sort((a,b)=>a.localeCompare(b,'es')); }
 
 // ─── MACRO ───
 function previewMacro(){
@@ -765,7 +796,7 @@ function cargarDesdeMacro(){
   const ings=[];
   conRec.forEach(r=>REC[r].i.forEach(ing=>ings.push({...ing})));
   items.push({dia,srv,diet,nombre:conRec.join(' + '),recetas:conRec,ingredientes:ings,porciones:por,id:Date.now(),esCombo:true,desdeMacro:true});
-  renderLista();
+  renderLista();guardarEstado();
   let msg=`✓ ${conRec.length} platos cargados — ${DIETAS[diet]}, ${dia} ${srv}`;
   if(sinRec.length) msg+=`. Sin receta: ${sinRec.join(', ')}`;
   mostrarNotif(msg);
@@ -785,6 +816,7 @@ function mostrarNotif(msg,tipo){
 // ─── COMBO MANUAL ───
 function filtrarC(){
   const q=document.getElementById('cRec').value.toLowerCase();
+  const nombres=getNombres();
   const res=q?nombres.filter(n=>n.toLowerCase().includes(q)):nombres;
   const drop=document.getElementById('cdrop');
   drop.innerHTML=res.slice(0,25).map(n=>`<div class="dopt" onmousedown="selRecC('${n.replace(/'/g,"\\'")}')"><b>${n}</b><small>${REC[n].t}</small></div>`).join('');
@@ -815,7 +847,7 @@ function confirmarCombo(){
   const ings=[];
   comboRecetas.forEach(r=>REC[r].i.forEach(ing=>ings.push({...ing})));
   items.push({dia,srv,diet,nombre:comboRecetas.join(' + '),recetas:[...comboRecetas],ingredientes:ings,porciones:por,id:Date.now(),esCombo:true});
-  comboRecetas=[];renderComboActual();renderLista();
+  comboRecetas=[];renderComboActual();renderLista();guardarEstado();
   mostrarNotif('✓ Combo agregado al menú');
 }
 
@@ -825,7 +857,7 @@ function guardarPlantilla(){
   const nombre=prompt('Nombre para esta plantilla:');
   if(!nombre)return;
   plantillas.push({nombre,recetas:[...comboRecetas],id:Date.now()});
-  renderPlantillas();
+  renderPlantillas();guardarEstado();
   mostrarNotif(`✓ Plantilla "${nombre}" guardada`);
 }
 function cargarPlantilla(id){
@@ -841,8 +873,8 @@ function cargarPlantilla(id){
   mostrarNotif(`✓ Plantilla "${p.nombre}" → ${DIETAS[diet]}, ${dia} ${srv}, ${por} porciones`);
   goTab('menu');
 }
-function borrarPlantilla(id){plantillas=plantillas.filter(x=>x.id!==id);renderPlantillas();}
-function limpiarTodasPlantillas(){if(confirm('¿Borrar todas las plantillas?')){plantillas=[];renderPlantillas();}}
+function borrarPlantilla(id){plantillas=plantillas.filter(x=>x.id!==id);renderPlantillas();guardarEstado();}
+function limpiarTodasPlantillas(){if(confirm('¿Borrar todas las plantillas?')){plantillas=[];renderPlantillas();guardarEstado();}}
 function renderPlantillas(){
   const el=document.getElementById('plantillas-lista');
   if(!plantillas.length){el.innerHTML='<div class="empty">Sin plantillas — armá un combo y guardalo desde el Menú</div>';return;}
@@ -850,8 +882,8 @@ function renderPlantillas(){
 }
 
 // ─── LISTA MENÚ ───
-function borrar(id){items=items.filter(i=>i.id!==id);renderLista();}
-function upd(id,val){const it=items.find(i=>i.id===id);if(it)it.porciones=val;}
+function borrar(id){items=items.filter(i=>i.id!==id);renderLista();guardarEstado();}
+function upd(id,val){const it=items.find(i=>i.id===id);if(it){it.porciones=val;guardarEstado();}}
 function renderLista(){
   const el=document.getElementById('lista');
   if(!items.length){el.innerHTML='<div class="empty">Cargá platos desde el macro o armá un combo manual</div>';return;}
@@ -882,10 +914,10 @@ function addMerma(){
   if(!ing)return;
   mermas[ing.toLowerCase()]=pct;
   document.getElementById('mIng').value='';document.getElementById('mPct').value='';
-  renderMermas();
+  renderMermas();guardarEstado();
 }
-function addMR(ing,pct){mermas[ing.toLowerCase()]=pct;renderMermas();}
-function borrarMerma(k){delete mermas[k];renderMermas();}
+function addMR(ing,pct){mermas[ing.toLowerCase()]=pct;renderMermas();guardarEstado();}
+function borrarMerma(k){delete mermas[k];renderMermas();guardarEstado();}
 function renderMermas(){
   const el=document.getElementById('mermaList');
   const keys=Object.keys(mermas);
@@ -902,9 +934,9 @@ function addProv(){
   if(!n||!g)return;
   proveedores.push({nombre:n,palabras:g.toLowerCase().split(',').map(x=>x.trim()),dias:d,perecedero:p==='si',id:Date.now()});
   document.getElementById('pNombre').value='';document.getElementById('pGrupo').value='';document.getElementById('pDias').value='';
-  renderProveedores();renderCronograma();
+  renderProveedores();renderCronograma();guardarEstado();
 }
-function borrarProv(id){proveedores=proveedores.filter(p=>p.id!==id);renderProveedores();renderCronograma();}
+function borrarProv(id){proveedores=proveedores.filter(p=>p.id!==id);renderProveedores();renderCronograma();guardarEstado();}
 function getProv(n){const nl=n.toLowerCase();return proveedores.find(p=>p.palabras.some(pal=>nl.includes(pal)))||null;}
 function renderProveedores(){
   const el=document.getElementById('provList');
@@ -1140,58 +1172,92 @@ function goTab(t){
 
 previewMacro();
 renderLista();
+renderMermas();
+renderProveedores();
+renderCronograma();
+renderPlantillas();
 
-// ─── PROCESADOR DE ARCHIVOS DE RECETAS (CSV) ───
+// ─── PROCESADOR DE ARCHIVOS DE RECETAS (CSV y ZIP) ───
 function procesarArchivoRecetas(input) {
   const file = input.files[0];
   if (!file) return;
-  
   document.getElementById('archivoNombre').innerText = file.name;
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    analizarYGuardarRecetas(e.target.result, file.name);
-  };
-  reader.readAsText(file, 'UTF-8');
+
+  if (file.name.toLowerCase().endsWith('.zip')) {
+    procesarZIP(file);
+  } else {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const log = document.getElementById('logCarga');
+      log.style.display = 'block';
+      log.innerHTML = '';
+      const resultado = analizarYGuardarReceta(e.target.result, file.name);
+      log.innerHTML = formatearLog([resultado]);
+      persistirRecetasExt();
+    };
+    reader.readAsText(file, 'UTF-8');
+  }
+  input.value = '';
 }
 
-function analizarYGuardarRecetas(texto, fileName) {
+async function procesarZIP(file) {
+  const log = document.getElementById('logCarga');
+  log.style.display = 'block';
+  log.innerHTML = '<em>Procesando ZIP...</em>';
+
+  try {
+    const zip = await JSZip.loadAsync(file);
+    const archivos = [];
+    zip.forEach((path, entry) => {
+      if (!entry.dir && /\.(csv|txt)$/i.test(entry.name)) {
+        archivos.push({ nombre: entry.name.split('/').pop(), entry });
+      }
+    });
+
+    if (!archivos.length) {
+      log.innerHTML = '<span style="color:var(--rojo)">⚠ No se encontraron archivos CSV dentro del ZIP.</span>';
+      return;
+    }
+
+    const resultados = [];
+    for (const arch of archivos) {
+      const texto = await arch.entry.async('string');
+      resultados.push(analizarYGuardarReceta(texto, arch.nombre));
+    }
+
+    persistirRecetasExt();
+    log.innerHTML = formatearLog(resultados);
+  } catch(err) {
+    log.innerHTML = `<span style="color:var(--rojo)">⚠ Error al leer el ZIP: ${err.message}</span>`;
+  }
+}
+
+function analizarYGuardarReceta(texto, fileName) {
   const lineas = texto.split(/\r?\n/);
   let nombreReceta = "";
   let ingredientes = [];
-  
-  // Captura el título desde la celda A1 (ej: MUSLITO DE POLLO AL HORNO/LASAÑA Y PAPAS)
+
   if (lineas.length > 0) {
     let primeraLinea = lineas[0].split(',')[0];
     if (primeraLinea && primeraLinea.trim() !== '') {
       nombreReceta = primeraLinea.split('/')[0].trim();
     }
   }
-  
   if (!nombreReceta) {
     nombreReceta = fileName.replace(/\.[^/.]+$/, "").split('_')[0].trim();
   }
-  
-  // Normaliza el nombre (Primera letra Mayúscula, resto minúsculas)
   nombreReceta = nombreReceta.charAt(0).toUpperCase() + nombreReceta.slice(1).toLowerCase();
 
   for (let i = 1; i < lineas.length; i++) {
     let linea = lineas[i].trim();
     if (!linea) continue;
-    
     let cols = linea.split(',').map(c => c.trim().replace(/^"|"$/g, ''));
     let col0 = cols[0] ? cols[0].toLowerCase() : '';
-    
-    // Ignorar líneas vacías, títulos de secciones o la fecha de actualización
-    if (!cols[0] || col0 === 'ingredientes' || col0.startsWith('guarnición') || col0.startsWith('fecha')) {
-      continue;
-    }
-    
+    if (!cols[0] || col0 === 'ingredientes' || col0.startsWith('guarnición') || col0.startsWith('fecha')) continue;
     let ing = cols[0];
     let cantStr = cols[2];
     let med = cols[3] || 'g';
-    
     if (ing && cantStr) {
-      // Si dice c/n (cantidad necesaria) le ponemos 0.1 para que no rompa los cálculos matemáticos
       let cantNum = cantStr.toLowerCase() === 'c/n' ? 0.1 : parseFloat(cantStr);
       if (!isNaN(cantNum)) {
         ingredientes.push({
@@ -1204,29 +1270,44 @@ function analizarYGuardarRecetas(texto, fileName) {
   }
 
   if (nombreReceta && ingredientes.length > 0) {
-    let esNueva = !REC[nombreReceta];
-    
-    // Guardar en la base de datos temporal en ejecución
+    const esNueva = !REC[nombreReceta];
     REC[nombreReceta] = { t: "PP", i: ingredientes };
-    
-    // Guardar permanentemente en el navegador (Local Storage)
-    let recetasExt = JSON.parse(localStorage.getItem('SA_RECETAS_EXT')) || {};
-    recetasExt[nombreReceta] = { t: "PP", i: ingredientes };
-    localStorage.setItem('SA_RECETAS_EXT', JSON.stringify(recetasExt));
-    
-    // Notificación en pantalla
-    const log = document.getElementById('logCarga');
-    log.style.display = 'block';
-    log.innerHTML = `<strong>¡Procesado con éxito!</strong><br>
-                    • Receta: <code>${nombreReceta}</code><br>
-                    • Ingredientes registrados: ${ingredientes.length}<br>
-                    • Estado: ${esNueva ? '✨ Agregada como nueva' : '🔄 Actualizada (Ya existía)'}`;
-    
-    input.value = ""; // Limpiar input
+    return { ok: true, nombre: nombreReceta, cantidad: ingredientes.length, nueva: esNueva };
   } else {
-    alert("No se pudo interpretar el archivo. Asegúrate de subir el archivo guardado como formato CSV.");
+    return { ok: false, nombre: fileName };
   }
 }
+
+function persistirRecetasExt() {
+  // Guardamos sólo las que no venían en el código base original
+  const recetasExt = JSON.parse(localStorage.getItem('SA_RECETAS_EXT') || '{}');
+  // Re-volcamos todo lo que esté en REC que sea "externo" (ya guardado antes + nuevas)
+  Object.assign(recetasExt, JSON.parse(localStorage.getItem('SA_RECETAS_EXT') || '{}'));
+  // En realidad simplemente sincronizamos todo REC para no perder nada
+  localStorage.setItem('SA_RECETAS_EXT', JSON.stringify(
+    Object.fromEntries(Object.entries(REC))
+  ));
+}
+
+function formatearLog(resultados) {
+  const ok = resultados.filter(r => r.ok);
+  const err = resultados.filter(r => !r.ok);
+  let html = '';
+  if (ok.length) {
+    html += `<strong>✅ ${ok.length} receta${ok.length>1?'s':''} procesada${ok.length>1?'s':''}:</strong><ul style="margin:6px 0 6px 16px">`;
+    ok.forEach(r => {
+      html += `<li><code>${r.nombre}</code> — ${r.cantidad} ingredientes — ${r.nueva ? '✨ Nueva' : '🔄 Actualizada'}</li>`;
+    });
+    html += '</ul>';
+  }
+  if (err.length) {
+    html += `<strong style="color:var(--rojo)">⚠ ${err.length} archivo${err.length>1?'s':''} sin procesar:</strong><ul style="margin:6px 0 6px 16px;color:var(--rojo)">`;
+    err.forEach(r => { html += `<li>${r.nombre}</li>`; });
+    html += '</ul>';
+  }
+  return html || '<em>Sin resultados</em>';
+}
+
 
 </script>
 </body></html>
