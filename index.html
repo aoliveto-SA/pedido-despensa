@@ -1065,6 +1065,17 @@ function getUCat(u){
   return 'o';
 }
 
+// Determina si un ingrediente puntual de un item pertenece efectivamente a una receta de sopa
+// del combo (y no simplemente a que el combo "incluya" una sopa entre otros platos).
+function esIngredienteDeSopa(it, ing){
+  return (it.recetas||[]).some(r=>{
+    if(REC[r] && REC[r].t==='SO'){
+      return REC[r].i.some(ingRec => ingRec.i.toLowerCase() === ing.i.toLowerCase());
+    }
+    return false;
+  });
+}
+
 function calcTotales(){
   const tot={};
   let porcionesTotalSopa=0;
@@ -1203,11 +1214,12 @@ function renderPedido(){
         if(tieneSopa) porcionesSopaDia += it.porciones;
 
         (it.ingredientes||[]).forEach(ing=>{
+          // Saltar los ingredientes propios de la receta de sopa (se reemplazan por el mix base)
+          if(tieneSopa && esIngredienteDeSopa(it, ing)) return;
           const cat=getUCat(ing.u);
           const key=ing.i.toLowerCase().trim()+'|||'+cat;
           if(!totDia[key]) totDia[key]={nombre:ing.i,cat,u:ing.u,cant:0,esSopa:false};
           totDia[key].cant += ing.c * it.porciones;
-          if(tieneSopa) totDia[key].esSopa=true;
         });
       });
 
@@ -1291,11 +1303,11 @@ function exportXLSXPorDia(){
       const tieneSopa=(it.recetas||[]).some(r=>REC[r]&&REC[r].t==='SO');
       if(tieneSopa) porcionesSopaDia += it.porciones;
       (it.ingredientes||[]).forEach(ing=>{
+        if(tieneSopa && esIngredienteDeSopa(it, ing)) return;
         const cat=getUCat(ing.u);
         const key=ing.i.toLowerCase().trim()+'|||'+cat;
         if(!totDia[key]) totDia[key]={nombre:ing.i,cat,u:ing.u,cant:0,esSopa:false};
         totDia[key].cant += ing.c * it.porciones;
-        if(tieneSopa) totDia[key].esSopa=true;
       });
     });
 
