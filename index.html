@@ -930,8 +930,18 @@ function renderPedido(){
   const vis=filtroU==='todo'?tots:tots.filter(r=>r.cat===filtroU);
   if(!vis.length){document.getElementById('resultado').innerHTML='<div class="empty">Sin ingredientes para mostrar</div>';return;}
   const bc=c=>c==='g'?'b-g':c==='ml'?'b-ml':c==='u'?'b-u':'b-o';
+  
   if(vista==='consolidado'){
-    document.getElementById('resultado').innerHTML=`<div class="card" style="padding:0;overflow:hidden"><table><thead><tr><th>Ingrediente</th><th style="text-align:right">Receta</th><th style="text-align:right">Merma</th><th style="text-align:right">PEDIR</th><th>Unidad</th></tr></thead><tbody>${vis.map(r=>`<tr><td>${r.nombre}</td><td class="num-dim">${fmtNum(r.cant)}</td><td style="text-align:right;color:var(--rojo);font-size:12px;font-weight:500">${r.merma>0?'+'+Math.round(r.merma*100)+'%':'—'}</td><td class="num" style="font-size:15px;color:var(--azul)">${fmtNum(r.cantConMerma)}</td><td><span class="badge ${bc(r.cat)}">${r.u}</span></td></tr>`).join('')}</tbody></table></div><p style="font-size:12px;color:var(--gris);margin-top:8px;padding-left:2px">${vis.length} ingredientes</p>`;
+    document.getElementById('resultado').innerHTML=`<div class="card" style="padding:0;overflow:hidden"><table><thead><tr><th>Ingrediente</th><th style="text-align:right">Receta</th><th style="text-align:right">Merma</th><th style="text-align:right">PEDIR</th><th>Unidad</th></tr></thead><tbody>${vis.map(r=>{
+      // --- AJUSTE DE SOPA EN VISTA CONSOLIDADO ---
+      let cantMostrar = r.cantConMerma;
+      let uniMostrar = r.u;
+      if (r.nombre.toLowerCase().includes('sopa') && r.nombre.toLowerCase().includes('verdura')) {
+        cantMostrar = Math.ceil(cantMostrar / 10);
+        uniMostrar = cantMostrar === 1 ? 'bolsa (10kg)' : 'bolsas (10kg)';
+      }
+      return `<tr><td>${r.nombre}</td><td class="num-dim">${fmtNum(r.cant)}</td><td style="text-align:right;color:var(--rojo);font-size:12px;font-weight:500">${r.merma>0?'+'+Math.round(r.merma*100)+'%':'—'}</td><td class="num" style="font-size:15px;color:var(--azul)">${fmtNum(cantMostrar)}</td><td><span class="badge ${bc(r.cat)}">${uniMostrar}</span></td></tr>`;
+    }).join('')}</tbody></table></div><p style="font-size:12px;color:var(--gris);margin-top:8px;padding-left:2px">${vis.length} ingredientes</p>`;
   } else {
     const porDia={};
     items.forEach(it=>{const k=`${it.dia} · ${it.srv}`;if(!porDia[k])porDia[k]=[];porDia[k].push(it);});
@@ -941,7 +951,17 @@ function renderPedido(){
       dItems.forEach(it=>{(it.ingredientes||[]).forEach(ing=>{const cat=getUCat(ing.u);const key=ing.i.toLowerCase().trim()+'|||'+cat;if(!totDia[key])totDia[key]={nombre:ing.i,cat,u:ing.u,cant:0};totDia[key].cant+=ing.c*it.porciones;});});
       const rowsDia=Object.values(totDia).map(r=>{const m=getMerma(r.nombre);return{...r,merma:m,cantConMerma:r.cant*(1+m)};}).sort((a,b)=>a.nombre.localeCompare(b.nombre,'es'));
       const visDia=filtroU==='todo'?rowsDia:rowsDia.filter(r=>r.cat===filtroU);
-      html+=`<div class="dia-sec"><div class="dia-title">${dia}</div><div class="card" style="padding:0;overflow:hidden"><table><thead><tr><th>Ingrediente</th><th style="text-align:right">Receta</th><th style="text-align:right">PEDIR</th><th>Unidad</th><th>Proveedor</th></tr></thead><tbody>${visDia.map(r=>{const p=getProv(r.nombre);return`<tr><td>${r.nombre}</td><td class="num-dim">${fmtNum(r.cant)}</td><td class="num" style="color:var(--azul)">${fmtNum(r.cantConMerma)}</td><td><span class="badge ${bc(r.cat)}">${r.u}</span></td><td>${p?`<span class="prov-badge ${p.perecedero?'p':''}">${p.nombre} · ${p.dias}</span>`:''}</td></tr>`;}).join('')}</tbody></table></div></div>`;
+      html+=`<div class="dia-sec"><div class="dia-title">${dia}</div><div class="card" style="padding:0;overflow:hidden"><table><thead><tr><th>Ingrediente</th><th style="text-align:right">Receta</th><th style="text-align:right">PEDIR</th><th>Unidad</th><th>Proveedor</th></tr></thead><tbody>${visDia.map(r=>{
+        const p=getProv(r.nombre);
+        // --- AJUSTE DE SOPA EN VISTA POR DÍA ---
+        let cantMostrar = r.cantConMerma;
+        let uniMostrar = r.u;
+        if (r.nombre.toLowerCase().includes('sopa') && r.nombre.toLowerCase().includes('verdura')) {
+          cantMostrar = Math.ceil(cantMostrar / 10);
+          uniMostrar = cantMostrar === 1 ? 'bolsa (10kg)' : 'bolsas (10kg)';
+        }
+        return `<tr><td>${r.nombre}</td><td class="num-dim">${fmtNum(r.cant)}</td><td class="num" style="color:var(--azul)">${fmtNum(cantMostrar)}</td><td><span class="badge ${bc(r.cat)}">${uniMostrar}</span></td><td>${p?`<span class="prov-badge ${p.perecedero?'p':''}">${p.nombre} · ${p.dias}</span>`:''}</td></tr>`;
+      }).join('')}</tbody></table></div></div>`;
     }
     document.getElementById('resultado').innerHTML=html||'<div class="empty">Sin datos</div>';
   }
