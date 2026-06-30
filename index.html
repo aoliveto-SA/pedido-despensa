@@ -752,6 +752,9 @@ const REC = {
 "Vitina":{t:"GU",i:[{i:"Vitina cruda",c:25,u:"g"},{i:"Caldo",c:200,u:"ml"}]},
 };
 
+// --- RECETAS BASE (antes de cargar externas) ---
+const REC_BASE_NOMBRES = new Set(Object.keys(REC));
+
 // --- LEER RECETAS EXTERNAS GUARDADAS EN EL NAVEGADOR ---
 const recetasGuardadas = JSON.parse(localStorage.getItem('SA_RECETAS_EXT'));
 if (recetasGuardadas) {
@@ -1433,11 +1436,7 @@ function formatearLog(resultados) {
 
 
 // ─── GESTIÓN DE RECETAS ───
-// Set de nombres seleccionados para eliminar
 let recSeleccionadas = new Set();
-
-// Conjunto de recetas base (hardcoded) — no se pueden eliminar
-const REC_BASE_NOMBRES = new Set(Object.keys(REC));
 
 function renderGestorRecetas() {
   const q = (document.getElementById('rec-buscar')?.value || '').toLowerCase().trim();
@@ -1537,3 +1536,6 @@ function eliminarSeleccionadas() {
   renderGestorRecetas();
   mostrarNotif(`🗑 ${aEliminar.length} receta${aEliminar.length>1?'s':''} eliminada${aEliminar.length>1?'s':''}`);
 }
+
+</script>
+</body></html>
