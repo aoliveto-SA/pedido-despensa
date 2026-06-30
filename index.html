@@ -1203,32 +1203,60 @@ function procesarArchivoRecetas(input) {
 async function procesarZIP(file) {
   const log = document.getElementById('logCarga');
   log.style.display = 'block';
-  log.innerHTML = '<em>Procesando ZIP...</em>';
+  log.innerHTML = '<em>Abriendo ZIP...</em>';
 
   try {
     const zip = await JSZip.loadAsync(file);
+
+    // Listar TODO lo que hay en el ZIP para poder diagnosticar
+    const todosLosArchivos = [];
+    zip.forEach((rutaCompleta, entry) => {
+      if (!entry.dir) todosLosArchivos.push(rutaCompleta);
+    });
+
+    // Aceptar CSV, TXT, y también XLSX (Google Drive a veces exporta así)
+    // Si no tiene extensión conocida, lo intentamos igual (podría ser CSV sin extensión)
     const archivos = [];
     zip.forEach((rutaCompleta, entry) => {
-      // Usamos rutaCompleta para detectar la extensión, así funciona con subcarpetas anidadas
-      if (!entry.dir && /\.(csv|txt)$/i.test(rutaCompleta)) {
-        // El nombre visible es solo el archivo, sin la ruta de carpetas
-        archivos.push({ nombre: rutaCompleta.split('/').pop(), entry });
+      if (!entry.dir) {
+        const ext = rutaCompleta.split('.').pop().toLowerCase();
+        // Excluimos solo binarios conocidos que jamás son recetas
+        const excluir = ['png','jpg','jpeg','gif','pdf','docx','pptx','xml','json','__macosx'];
+        const esExcluido = excluir.some(x => rutaCompleta.toLowerCase().includes(x));
+        if (!esExcluido) {
+          archivos.push({ nombre: rutaCompleta.split('/').pop(), ruta: rutaCompleta, entry, ext });
+        }
       }
     });
 
     if (!archivos.length) {
-      log.innerHTML = '<span style="color:var(--rojo)">⚠ No se encontraron archivos CSV dentro del ZIP.</span>';
+      log.innerHTML = `<span style="color:var(--rojo)">⚠ No se encontraron archivos procesables en el ZIP.</span>
+        <br><small style="color:var(--gris)">Archivos encontrados en el ZIP (${todosLosArchivos.length}):<br>
+        ${todosLosArchivos.map(p=>`• ${p}`).join('<br>') || 'ninguno'}</small>`;
       return;
     }
 
+    log.innerHTML = `<em>Procesando ${archivos.length} archivo${archivos.length>1?'s':''}...</em>`;
+
     const resultados = [];
     for (const arch of archivos) {
-      const texto = await arch.entry.async('string');
-      resultados.push(analizarYGuardarReceta(texto, arch.nombre));
+      try {
+        const texto = await arch.entry.async('string');
+        resultados.push(analizarYGuardarReceta(texto, arch.nombre));
+      } catch(e) {
+        resultados.push({ ok: false, nombre: arch.nombre, error: e.message });
+      }
     }
 
     persistirRecetasExt();
-    log.innerHTML = formatearLog(resultados);
+
+    // Mostrar log + detalle de archivos encontrados para diagnóstico
+    const htmlDebug = `<details style="margin-top:8px;font-size:11px;color:var(--gris)">
+      <summary style="cursor:pointer">Ver todos los archivos del ZIP (${todosLosArchivos.length})</summary>
+      <div style="margin-top:4px">${todosLosArchivos.map(p=>`• ${p}`).join('<br>')}</div>
+    </details>`;
+
+    log.innerHTML = formatearLog(resultados) + htmlDebug;
   } catch(err) {
     log.innerHTML = `<span style="color:var(--rojo)">⚠ Error al leer el ZIP: ${err.message}</span>`;
   }
