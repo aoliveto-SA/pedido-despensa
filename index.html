@@ -999,6 +999,7 @@ function renderPedido(){
   };
 
   if(vista==='consolidado'){
+    // CORRECCIÓN AQUÍ: Forzamos minúsculas para que encuentre "Sopa" o "sopa" sin fallar
     const listaSopas = vis.filter(r => r.nombre.toLowerCase().includes('sopa'));
     const listaOtros = vis.filter(r => !r.nombre.toLowerCase().includes('sopa'));
 
