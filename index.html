@@ -290,20 +290,17 @@ tr:hover td{background:var(--fondo)}
   <div class="card">
     <div class="card-title">Sugeridas</div>
     <div style="display:flex;gap:6px;flex-wrap:wrap">
-      <button class="btn btn-s" onclick="addMR('Lomo',30)" style="font-size:12px;padding:4px 10px">Lomo 30%</button>
-      <button class="btn btn-s" onclick="addMR('Bife de chorizo',25)" style="font-size:12px;padding:4px 10px">Bife 25%</button>
-      <button class="btn btn-s" onclick="addMR('Pechuga',20)" style="font-size:12px;padding:4px 10px">Pechuga 20%</button>
-      <button class="btn btn-s" onclick="addMR('Muslo de pollo',20)" style="font-size:12px;padding:4px 10px">Muslo 20%</button>
-      <button class="btn btn-s" onclick="addMR('Pata muslo',20)" style="font-size:12px;padding:4px 10px">Pata muslo 20%</button>
+      <button class="btn btn-s" onclick="addMR('Lomo',50)" style="font-size:12px;padding:4px 10px">Lomo 50%</button>
+      <button class="btn btn-s" onclick="addMR('Bife de chorizo',40)" style="font-size:12px;padding:4px 10px">Bife 40%</button>
+      <button class="btn btn-s" onclick="addMR('Pechuga',50)" style="font-size:12px;padding:4px 10px">Pechuga 50%</button>
+      <button class="btn btn-s" onclick="addMR('Muslo de pollo',50)" style="font-size:12px;padding:4px 10px">Muslo 50%</button>
+      <button class="btn btn-s" onclick="addMR('Pata muslo',50)" style="font-size:12px;padding:4px 10px">Pata muslo 50%</button>
       <button class="btn btn-s" onclick="addMR('Nalga',22)" style="font-size:12px;padding:4px 10px">Nalga 22%</button>
       <button class="btn btn-s" onclick="addMR('Peceto',25)" style="font-size:12px;padding:4px 10px">Peceto 25%</button>
-      <button class="btn btn-s" onclick="addMR('Matambre',20)" style="font-size:12px;padding:4px 10px">Matambre 20%</button>
+      <button class="btn btn-s" onclick="addMR('Matambre',60)" style="font-size:12px;padding:4px 10px">Matambre 60%</button>
       <button class="btn btn-s" onclick="addMR('Trucha',15)" style="font-size:12px;padding:4px 10px">Trucha 15%</button>
-      <button class="btn btn-s" onclick="addMR('Papa entera',20)" style="font-size:12px;padding:4px 10px">Papa 20%</button>
-      <button class="btn btn-s" onclick="addMR('Calabaza entera',30)" style="font-size:12px;padding:4px 10px">Calabaza 30%</button>
-      <button class="btn btn-s" onclick="addMR('Zanahoria entera',15)" style="font-size:12px;padding:4px 10px">Zanahoria 15%</button>
       <button class="btn btn-s" onclick="addMR('Espinaca congelada',10)" style="font-size:12px;padding:4px 10px">Espinaca 10%</button>
-      <button class="btn btn-s" onclick="addMR('Espárragos congelados',15)" style="font-size:12px;padding:4px 10px">Espárragos 15%</button>
+      <button class="btn btn-s" onclick="addMR('Espárragos congelados',40)" style="font-size:12px;padding:4px 10px">Espárragos 40%</button>
       <button class="btn btn-s" onclick="addMR('Remolacha entera',15)" style="font-size:12px;padding:4px 10px">Remolacha 15%</button>
     </div>
   </div>
@@ -764,8 +761,17 @@ if (recetasGuardadas) {
     if (nombreLimpio) recetasLimpias[nombreLimpio] = rec;
   });
   Object.assign(REC, recetasLimpias);
-  // Persistir la versión limpia
-  localStorage.setItem('SA_RECETAS_EXT', JSON.stringify(recetasLimpias));
+  // Corrección automática: recetas cuyo nombre indica claramente "sopa" pero que quedaron
+  // guardadas con otro tipo (por ejemplo "Plato") por una carga anterior, se recategorizan.
+  let huboCorreccion = false;
+  Object.keys(REC).forEach(nombre => {
+    if (/\bsopa\b|\bcaldo\b/i.test(nombre) && REC[nombre].t !== 'SO') {
+      REC[nombre].t = 'SO';
+      huboCorreccion = true;
+    }
+  });
+  // Persistir la versión limpia (y corregida, si aplicó)
+  localStorage.setItem('SA_RECETAS_EXT', JSON.stringify(huboCorreccion ? Object.fromEntries(Object.entries(REC)) : recetasLimpias));
 }
 
 const DIETAS={g:'General',l:'Liviano',lc:'Liv. c/carne',n:'Niño',a:'Adolescente',b1:'Bebé 1',b2:'Bebé 2',dbt:'DBT',bcb:'BCB',veg:'Vegetariano',cel:'Celíaco',ast:'Astringente',sl:'Súper liviano',ids4:'IDSSI 4',ids5:'IDSSI 5',ids6:'IDSSI 6',ids7:'IDSSI 7',exc:'Excepción'};
@@ -1582,12 +1588,27 @@ function analizarYGuardarReceta(texto, fileName) {
   }
 
   if (nombreReceta && ingredientes.length > 0) {
-    const esNueva = !REC[nombreReceta];
-    REC[nombreReceta] = { t: "PP", i: ingredientes };
+    const existente = REC[nombreReceta];
+    const esNueva = !existente;
+    // Si la receta ya existía, conservamos su tipo/categoría actual (no la pisamos con "Plato").
+    // Si es nueva, intentamos detectar el tipo por el nombre; si no se puede inferir, usamos "PP" (Plato) por defecto.
+    const tipo = existente ? existente.t : detectarTipoReceta(nombreReceta);
+    REC[nombreReceta] = { t: tipo, i: ingredientes };
     return { ok: true, nombre: nombreReceta, cantidad: ingredientes.length, nueva: esNueva };
   } else {
     return { ok: false, nombre: fileName };
   }
+}
+
+// Intenta inferir la categoría de una receta nueva a partir de su nombre.
+// PP: Plato, GU: Guarnición, EN: Entrada, SO: Sopa, PO: Postre
+function detectarTipoReceta(nombre) {
+  const n = nombre.toLowerCase();
+  if (/\bsopa\b|\bcaldo\b|\bcrema de\b/.test(n)) return 'SO';
+  if (/\bpostre\b|\bflan\b|\bgelatina\b|\bmousse\b|\btorta\b|\bbudín\b|\bbudin\b/.test(n)) return 'PO';
+  if (/\bentrada\b/.test(n)) return 'EN';
+  if (/\bguarnici[oó]n\b|\bpur[eé] de\b|\barroz blanco\b|\bensalada de (papa|verduras|arroz)\b/.test(n)) return 'GU';
+  return 'PP';
 }
 
 
