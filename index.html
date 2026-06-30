@@ -961,51 +961,106 @@ function renderPedido(){
   const tots=calcTotales();
   const tp=items.reduce((s,i)=>s+i.porciones,0);
   document.getElementById('sumCards').innerHTML=`<div class="scard"><strong>${items.length}</strong><span>Combos/platos</span></div><div class="scard"><strong>${tp}</strong><span>Porciones</span></div><div class="scard"><strong>${tots.length}</strong><span>Ingredientes</span></div>`;
+  
   const vis=filtroU==='todo'?tots:tots.filter(r=>r.cat===filtroU);
   if(!vis.length){document.getElementById('resultado').innerHTML='<div class="empty">Sin ingredientes para mostrar</div>';return;}
   const bc=c=>c==='g'?'b-g':c==='ml'?'b-ml':c==='u'?'b-u':'b-o';
-  
+
+  // Función auxiliar interna para armar las tablas
+  const generarTablaHTML = (lista, esVistaConsolidado, mostrarProveedor = false) => {
+    return `<div class="card" style="padding:0;overflow:hidden;margin-bottom:20px;">
+      <table>
+        <thead>
+          <tr>
+            <th>Ingrediente</th>
+            <th style="text-align:right">Receta</th>
+            ${esVistaConsolidado ? '<th style="text-align:right">Merma</th>' : ''}
+            <th style="text-align:right">PEDIR</th>
+            <th>Unidad</th>
+            ${mostrarProveedor ? '<th>Proveedor</th>' : ''}
+          </tr>
+        </thead>
+        <tbody>
+          ${lista.map(r=>{
+            const p = mostrarProveedor ? getProv(r.nombre) : null;
+            const esSopa = r.nombre.toLowerCase().includes('sopa');
+            return `<tr>
+              <td>${r.nombre}</td>
+              <td class="num-dim">${fmtNum(r.cant)}</td>
+              ${esVistaConsolidado ? `<td style="text-align:right;color:var(--rojo);font-size:12px;font-weight:500">${r.merma>0?'+'+Math.round(r.merma*100)+'%':'—'}</td>` : ''}
+              <td class="num" style="font-size:15px;color:var(--azul)">${fmtNum(r.cantConMerma)}</td>
+              <td><span class="badge ${esSopa ? 'b-u' : bc(r.cat)}">${r.u}</span></td>
+              ${mostrarProveedor ? `<td>${p?`<span class="prov-badge ${p.perecedero?'p':''}">${p.nombre} · ${p.dias}</span>`:''}</td>` : ''}
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>`;
+  };
+
   if(vista==='consolidado'){
-    document.getElementById('resultado').innerHTML=`<div class="card" style="padding:0;overflow:hidden"><table><thead><tr><th>Ingrediente</th><th style="text-align:right">Receta</th><th style="text-align:right">Merma</th><th style="text-align:right">PEDIR</th><th>Unidad</th></tr></thead><tbody>${vis.map(r=>{
-      // --- AJUSTE INTELIGENTE DE SOPA ---
-      let cantMostrar = r.cantConMerma;
-      let uniMostrar = r.u;
-      if (r.nombre.toLowerCase().includes('sopa')) {
-        // Si el número es mayor a 10, asumimos que está expresado en gramos (ej: 4000g o 10000g)
-        if (cantMostrar > 10) {
-          cantMostrar = Math.ceil(cantMostrar / 10000);
-        } else {
-          // Si es un número chico (ej: 1, 2, 0.5), significa que en la receta ya se tipeó directamente como "bolsa"
-          cantMostrar = Math.ceil(cantMostrar);
-        }
-        uniMostrar = cantMostrar === 1 ? 'bolsa (10kg)' : 'bolsas (10kg)';
-      }
-      return `<tr><td>${r.nombre}</td><td class="num-dim">${fmtNum(r.cant)}</td><td style="text-align:right;color:var(--rojo);font-size:12px;font-weight:500">${r.merma>0?'+'+Math.round(r.merma*100)+'%':'—'}</td><td class="num" style="font-size:15px;color:var(--azul)">${fmtNum(cantMostrar)}</td><td><span class="badge ${bc(r.cat)}">${uniMostrar}</span></td></tr>`;
-    }).join('')}</tbody></table></div><p style="font-size:12px;color:var(--gris);margin-top:8px;padding-left:2px">${vis.length} ingredientes</p>`;
+    const listaSopas = vis.filter(r => r.nombre.toLowerCase().includes('sopa'));
+    const listaOtros = vis.filter(r => !r.nombre.toLowerCase().includes('sopa'));
+
+    let htmlFinal = '';
+    if(listaSopas.length > 0) {
+      htmlFinal += `<div class="dia-title" style="color:var(--azul-txt);border-bottom:2px solid var(--azul);margin-top:15px;margin-bottom:10px;font-size:14px;font-weight:bold">🍲 INGREDIENTES PARA SOPAS</div>`;
+      htmlFinal += generarTablaHTML(listaSopas, true, false);
+    }
+    if(listaOtros.length > 0) {
+      htmlFinal += `<div class="dia-title" style="color:var(--verde-txt);border-bottom:2px solid var(--verde);margin-top:15px;margin-bottom:10px;font-size:14px;font-weight:bold">🍽️ DEMÁS MENÚS E INGREDIENTES</div>`;
+      htmlFinal += generarTablaHTML(listaOtros, true, false);
+    }
+
+    document.getElementById('resultado').innerHTML = htmlFinal + `<p style="font-size:12px;color:var(--gris);margin-top:8px;padding-left:2px">${vis.length} ingredientes en total</p>`;
   } else {
     const porDia={};
     items.forEach(it=>{const k=`${it.dia} · ${it.srv}`;if(!porDia[k])porDia[k]=[];porDia[k].push(it);});
     let html='';
+    
     for(const[dia,dItems] of Object.entries(porDia)){
       const totDia={};
-      dItems.forEach(it=>{(it.ingredientes||[]).forEach(ing=>{const cat=getUCat(ing.u);const key=ing.i.toLowerCase().trim()+'|||'+cat;if(!totDia[key])totDia[key]={nombre:ing.i,cat,u:ing.u,cant:0};totDia[key].cant+=ing.c*it.porciones;});});
-      const rowsDia=Object.values(totDia).map(r=>{const m=getMerma(r.nombre);return{...r,merma:m,cantConMerma:r.cant*(1+m)};}).sort((a,b)=>a.nombre.localeCompare(b.nombre,'es'));
-      const visDia=filtroU==='todo'?rowsDia:rowsDia.filter(r=>r.cat===filtroU);
-      html+=`<div class="dia-sec"><div class="dia-title">${dia}</div><div class="card" style="padding:0;overflow:hidden"><table><thead><tr><th>Ingrediente</th><th style="text-align:right">Receta</th><th style="text-align:right">PEDIR</th><th>Unidad</th><th>Proveedor</th></tr></thead><tbody>${visDia.map(r=>{
-        const p=getProv(r.nombre);
-        // --- AJUSTE INTELIGENTE DE SOPA ---
-        let cantMostrar = r.cantConMerma;
-        let uniMostrar = r.u;
-        if (r.nombre.toLowerCase().includes('sopa')) {
-          if (cantMostrar > 10) {
-            cantMostrar = Math.ceil(cantMostrar / 10000);
-          } else {
-            cantMostrar = Math.ceil(cantMostrar);
-          }
-          uniMostrar = cantMostrar === 1 ? 'bolsa (10kg)' : 'bolsas (10kg)';
+      dItems.forEach(it=>{(it.ingredientes||[]).forEach(ing=>{
+        const cat=getUCat(ing.u);
+        const key=ing.i.toLowerCase().trim()+'|||'+cat;
+        if(!totDia[key])totDia[key]={nombre:ing.i,cat,u:ing.u,cant:0};
+        
+        if(ing.i.toLowerCase().includes('sopa') || (it.nombre && it.nombre.toLowerCase().includes('sopa'))){
+          if(ing.c > 10) totDia[key].cant += (ing.c / 10000) * it.porciones;
+          else totDia[key].cant += ing.c * it.porciones;
+        } else {
+          totDia[key].cant += ing.c * it.porciones;
         }
-        return `<tr><td>${r.nombre}</td><td class="num-dim">${fmtNum(r.cant)}</td><td class="num" style="color:var(--azul)">${fmtNum(cantMostrar)}</td><td><span class="badge ${bc(r.cat)}">${uniMostrar}</span></td><td>${p?`<span class="prov-badge ${p.perecedero?'p':''}">${p.nombre} · ${p.dias}</span>`:''}</td></tr>`;
-      }).join('')}</tbody></table></div></div>`;
+      });});
+      
+      const rowsDia=Object.values(totDia).map(r=>{
+        const m=getMerma(r.nombre);
+        let cFinal = r.cant*(1+m);
+        let uFinal = r.u;
+        if(r.nombre.toLowerCase().includes('sopa')){
+          cFinal = Math.ceil(cFinal);
+          uFinal = cFinal === 1 ? 'bolsa (10kg)' : 'bolsas (10kg)';
+        }
+        return{...r,merma:m,cantConMerma:cFinal,u:uFinal};
+      }).sort((a,b)=>a.nombre.localeCompare(b.nombre,'es'));
+      
+      const visDia=filtroU==='todo'?rowsDia:rowsDia.filter(r=>r.cat===filtroU);
+      
+      if(visDia.length > 0) {
+        const sopasDia = visDia.filter(r => r.nombre.toLowerCase().includes('sopa'));
+        const otrosDia = visDia.filter(r => !r.nombre.toLowerCase().includes('sopa'));
+
+        html += `<div class="dia-sec" style="margin-top:20px;"><div class="dia-title" style="font-size:14px;font-weight:bold;color:var(--texto);border-bottom:3px solid var(--gris);">📅 ${dia}</div>`;
+        if(sopasDia.length > 0) {
+          html += `<div style="font-size:12px;font-weight:bold;color:var(--azul-txt);margin:10px 0 5px 0;">[SOPAS]</div>`;
+          html += generarTablaHTML(sopasDia, false, true);
+        }
+        if(otrosDia.length > 0) {
+          html += `<div style="font-size:12px;font-weight:bold;color:var(--verde-txt);margin:10px 0 5px 0;">[OTROS PLATOS]</div>`;
+          html += generarTablaHTML(otrosDia, false, true);
+        }
+        html += `</div>`;
+      }
     }
     document.getElementById('resultado').innerHTML=html||'<div class="empty">Sin datos</div>';
   }
