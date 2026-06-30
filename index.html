@@ -5,6 +5,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 <style>
 :root{
   --verde:#16a34a;--verde-claro:#dcfce7;--verde-txt:#166534;
@@ -308,6 +309,20 @@ tr:hover td{background:var(--fondo)}
 </div>
 
 <div id="tab-cargar-recetas" class="sec">
+  <div class="card" style="background:linear-gradient(135deg,#eff6ff,#f0fdf4);border-color:#bfdbfe">
+    <div class="card-title">📊 Actualizar Cuadro Macro (.docx)</div>
+    <p style="font-size:12px;color:var(--gris);margin-bottom:12px;">
+      Subí el archivo Word del <strong>cuadro macro</strong> (almuerzo + cena, todas las dietas y días). El sistema lee la tabla y actualiza automáticamente los platos que aparecen en "1 · Menú → Cargar desde cuadro macro", sin tocar tus recetas ni ingredientes ya cargados.
+    </p>
+    <div class="form-row" style="background: var(--blanco); padding: 20px; border-radius: var(--radio); border: 2px dashed #93c5fd; justify-content: center; flex-direction: column; align-items: center; gap: 10px; text-align: center;">
+      <input type="file" id="fileCuadroMacro" accept=".docx" style="display:none" onchange="procesarCuadroMacro(this)">
+      <button class="btn btn-a" onclick="document.getElementById('fileCuadroMacro').click()">Seleccionar archivo .docx del cuadro macro</button>
+      <span id="macroArchivoNombre" style="font-size:12px; color:var(--gris);">Ningún archivo seleccionado</span>
+    </div>
+    <div id="logCuadroMacro" style="margin-top:12px; font-size:12px; max-height:280px; overflow-y:auto; padding:8px; display:none; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:6px; color:#166534;"></div>
+    <div style="margin-top:10px" id="macroOverrideInfo"></div>
+  </div>
+
   <div class="card">
     <div class="card-title">📂 Importar o Actualizar Recetas desde CSV o ZIP</div>
     <p style="font-size:12px;color:var(--gris);margin-bottom:12px;">
@@ -357,6 +372,7 @@ tr:hover td{background:var(--fondo)}
       <button class="btn btn-s" style="font-size:12px" onclick="if(confirm('¿Borrar todas las mermas?')){mermas={};renderMermas();guardarEstado();mostrarNotif('Mermas borradas');}">Borrar mermas</button>
       <button class="btn btn-s" style="font-size:12px" onclick="if(confirm('¿Borrar todos los proveedores?')){proveedores=[];renderProveedores();renderCronograma();guardarEstado();mostrarNotif('Proveedores borrados');}">Borrar proveedores</button>
       <button class="btn btn-s" style="font-size:12px" onclick="if(confirm('¿Borrar recetas extra importadas?')){localStorage.removeItem('SA_RECETAS_EXT');mostrarNotif('Recetas importadas borradas — recargá la página');}">Borrar recetas importadas</button>
+      <button class="btn btn-s" style="font-size:12px" onclick="if(confirm('¿Restaurar el cuadro macro original (borrar el cuadro subido)?')){localStorage.removeItem('SA_MACRO_OVERRIDE');mostrarNotif('Cuadro macro restaurado al original — recargá la página');}">Restaurar cuadro macro original</button>
     </div>
   </div>
 </div>
@@ -656,6 +672,25 @@ const MACRO = {
     },
   }
 };
+
+// ── Aplica un cuadro macro subido por el usuario (si existe) sobre el MACRO por defecto ──
+function aplicarMacroOverride(){
+  try{
+    const ov = JSON.parse(localStorage.getItem('SA_MACRO_OVERRIDE')||'null');
+    if(!ov) return;
+    Object.keys(ov).forEach(srv=>{
+      if(!MACRO[srv]) MACRO[srv]={};
+      Object.keys(ov[srv]).forEach(diet=>{
+        if(!MACRO[srv][diet]) MACRO[srv][diet]={};
+        Object.keys(ov[srv][diet]).forEach(dia=>{
+          MACRO[srv][diet][dia]=ov[srv][diet][dia];
+        });
+      });
+    });
+  }catch(e){console.error('Error aplicando cuadro macro guardado:',e);}
+}
+aplicarMacroOverride();
+
 
 // ════════════════════════════════════════════
 // RECETAS
@@ -1732,6 +1767,183 @@ function eliminarSeleccionadas() {
   renderGestorRecetas();
   mostrarNotif(`🗑 ${aEliminar.length} receta${aEliminar.length>1?'s':''} eliminada${aEliminar.length>1?'s':''}`);
 }
+// ════════════════════════════════════════════
+// CARGA DE CUADRO MACRO DESDE .DOCX
+// ════════════════════════════════════════════
+
+// Diccionario: etiqueta de fila (normalizada, sin tildes, mayúsculas) -> { key: clave de dieta en MACRO, modo: 'reemplaza'|'suma' }
+// Se evalúa en orden; la primera coincidencia EXACTA gana.
+const MACRO_ROW_MAP = [
+  ['GENERAL DIABETICO', 'dbt', 'reemplaza'],
+  ['POSTRE GENERAL DBT', 'dbt', 'suma'],
+  ['ENTRADA GENERAL', 'g', 'suma'],
+  ['PROTEINA GENERAL', 'g', 'suma'],
+  ['GUARNICION GENERAL', 'g', 'suma'],
+  ['POSTRE GENERAL', 'g', 'suma'],
+  ['ENTRADA LIVIANO', 'l', 'suma'],
+  ['LIVIANO', 'l', 'suma'],
+  ['POSTRE LIVIANO', 'l', 'suma'],
+  ['LIVIANO CON CARNE', 'lc', 'reemplaza'],
+  ['MENU CELIAQUIA', 'cel', 'reemplaza'],
+  ['ASTRINGENTE', 'ast', 'reemplaza'],
+  ['IDSSI 4', 'ids4', 'reemplaza'],
+  ['IDSSI 5', 'ids5', 'reemplaza'],
+  ['IDSSI 6', 'ids6', 'reemplaza'],
+  ['IDSSI 7', 'ids7', 'reemplaza'],
+  ['VEGETARIANO', 'veg', 'reemplaza'],
+  ['SUPER LIVIANO', 'sl', 'reemplaza'],
+  ['EXCEPCIONES', 'exc', 'reemplaza'],
+];
+// Estas se comparan con "empieza con" en vez de igualdad exacta (porque traen subtítulos de edad)
+const MACRO_ROW_PREFIX = [
+  ['BEBE 1', 'b1', 'reemplaza'],
+  ['BEBE 2', 'b2', 'reemplaza'],
+  ['NINO', 'n', 'reemplaza'],
+  ['ADOLESCENTE', 'a', 'reemplaza'],
+  ['BCB', 'bcb', 'reemplaza'],
+];
+// Filas que NUNCA queremos importar (encabezados/exclusiones/colaciones)
+const MACRO_ROW_IGNORE = ['EXCEPCIONES CELIAQUIA','FIBRA','POSTRE LIVIANO DBT','COLACIONES','MEDIA MAÑANA','MEDIA TARDE'];
+
+const DIAS_ORDEN = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+
+function quitarTildes(s){
+  return (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+}
+function normFila(s){
+  return quitarTildes(s||'').toUpperCase().replace(/\s+/g,' ').trim();
+}
+function matchFilaMacro(label){
+  const n = normFila(label);
+  if(!n) return null;
+  if(MACRO_ROW_IGNORE.some(x=>n===x || n.startsWith(x))) return null;
+  for(const [pat,key,modo] of MACRO_ROW_MAP){ if(n===pat) return {key,modo}; }
+  for(const [pat,key,modo] of MACRO_ROW_PREFIX){ if(n.startsWith(pat)) return {key,modo}; }
+  return null;
+}
+function dividirItemsCelda(texto){
+  return (texto||'')
+    .split(/\s*\+\s*/)
+    .map(s=>s.replace(/\s+/g,' ').trim())
+    .filter(Boolean)
+    // Capitaliza primera letra para que combine mejor con nombres de recetas existentes
+    .map(s=> s.length ? s[0].toUpperCase()+s.slice(1).toLowerCase() : s);
+}
+
+async function procesarCuadroMacro(input){
+  const file = input.files[0];
+  if(!file) return;
+  document.getElementById('macroArchivoNombre').innerText = file.name;
+  const log = document.getElementById('logCuadroMacro');
+  log.style.display='block';
+  log.innerHTML = '<em>Leyendo documento...</em>';
+
+  if(!file.name.toLowerCase().endsWith('.docx')){
+    log.innerHTML = '<span style="color:var(--rojo)">⚠ El archivo debe ser .docx (Word). Si lo tenés en Google Docs, descargalo como "Microsoft Word (.docx)".</span>';
+    input.value=''; return;
+  }
+
+  try{
+    const buf = await file.arrayBuffer();
+    const resultado = await mammoth.convertToHtml({arrayBuffer:buf});
+    const doc = new DOMParser().parseFromString(resultado.value,'text/html');
+    const tablas = [...doc.querySelectorAll('table')];
+
+    if(!tablas.length){
+      log.innerHTML = '<span style="color:var(--rojo)">⚠ No se encontraron tablas en el documento.</span>';
+      input.value=''; return;
+    }
+
+    const nuevo = {Almuerzo:{}, Cena:{}};
+    const filasIgnoradas = new Set();
+    let servicioActual = null, ordenDias = null;
+    let filasReconocidas = 0;
+
+    tablas.forEach(tabla=>{
+      [...tabla.querySelectorAll('tr')].forEach(fila=>{
+        const celdas = [...fila.querySelectorAll('td,th')];
+        if(!celdas.length) return;
+        const textos = celdas.map(c=>c.textContent.replace(/\s+/g,' ').trim());
+        const primera = normFila(textos[0]);
+
+        // Fila de encabezado de servicio (ALMUERZO / CENA + días)
+        if(primera==='ALMUERZO' || primera==='CENA'){
+          servicioActual = primera==='ALMUERZO' ? 'Almuerzo' : 'Cena';
+          ordenDias = textos.slice(1,8).map(t=>{
+            const nt = normFila(t);
+            return DIAS_ORDEN.find(d=>normFila(d)===nt) || null;
+          });
+          return;
+        }
+
+        if(!servicioActual || !ordenDias) return; // todavía no encontramos el encabezado de días en esta tabla
+
+        const m = matchFilaMacro(textos[0]);
+        if(!m){
+          if(textos[0] && textos[0].length<60) filasIgnoradas.add(textos[0]);
+          return;
+        }
+        filasReconocidas++;
+        if(!nuevo[servicioActual][m.key]) nuevo[servicioActual][m.key]={};
+        ordenDias.forEach((dia,idx)=>{
+          if(!dia) return;
+          const items = dividirItemsCelda(textos[idx+1]);
+          if(!items.length) return;
+          if(!nuevo[servicioActual][m.key][dia]) nuevo[servicioActual][m.key][dia]=[];
+          if(m.modo==='reemplaza' && nuevo[servicioActual][m.key][dia]._inicializadaReemplazo!==true){
+            nuevo[servicioActual][m.key][dia]=[...items];
+            nuevo[servicioActual][m.key][dia]._inicializadaReemplazo=true;
+          } else {
+            nuevo[servicioActual][m.key][dia].push(...items);
+          }
+        });
+      });
+    });
+
+    // Limpieza de marca interna
+    Object.values(nuevo).forEach(srv=>Object.values(srv).forEach(diet=>Object.values(diet).forEach(arr=>{
+      if(Array.isArray(arr)) delete arr._inicializadaReemplazo;
+    })));
+
+    if(!filasReconocidas){
+      log.innerHTML = '<span style="color:var(--rojo)">⚠ Se leyó el documento pero no se reconoció ninguna fila de dieta. Revisá que el archivo tenga el mismo formato del cuadro macro habitual (tabla con LUNES…DOMINGO y filas como ENTRADA GENERAL, PROTEÍNA GENERAL, etc).</span>';
+      input.value=''; return;
+    }
+
+    // Guardar y aplicar
+    localStorage.setItem('SA_MACRO_OVERRIDE', JSON.stringify(nuevo));
+    aplicarMacroOverride();
+    if(typeof previewMacro==='function') previewMacro();
+
+    const resumenSrv = Object.entries(nuevo).map(([srv,diets])=>{
+      const cantDias = Object.values(diets).reduce((acc,d)=>acc+Object.keys(d).length,0);
+      return `<strong>${srv}</strong>: ${Object.keys(diets).length} dieta(s), ${cantDias} día(s) con datos`;
+    }).join('<br>');
+
+    const ignoradasArr = [...filasIgnoradas];
+    log.innerHTML = `✓ Cuadro macro actualizado correctamente.<br>${resumenSrv}` +
+      (ignoradasArr.length ? `<br><br><details style="color:var(--gris)"><summary>Filas no reconocidas / ignoradas (${ignoradasArr.length})</summary>${ignoradasArr.map(f=>'• '+f).join('<br>')}</details>` : '');
+
+    document.getElementById('macroOverrideInfo').innerHTML =
+      `<div style="font-size:11px;color:var(--gris)">📌 Hay un cuadro macro personalizado guardado en este navegador. Usá "Restaurar cuadro macro original" abajo para volver al de fábrica.</div>`;
+
+    mostrarNotif('✓ Cuadro macro actualizado desde el Word');
+  }catch(err){
+    console.error(err);
+    log.innerHTML = `<span style="color:var(--rojo)">⚠ Error al procesar el archivo: ${err.message}</span>`;
+  }
+  input.value='';
+}
+
+// Mostrar aviso si ya hay un cuadro macro personalizado guardado, al entrar a la pestaña
+(function(){
+  if(localStorage.getItem('SA_MACRO_OVERRIDE')){
+    document.addEventListener('DOMContentLoaded',()=>{
+      const el=document.getElementById('macroOverrideInfo');
+      if(el) el.innerHTML = `<div style="font-size:11px;color:var(--gris)">📌 Hay un cuadro macro personalizado guardado en este navegador. Usá "Restaurar cuadro macro original" abajo para volver al de fábrica.</div>`;
+    });
+  }
+})();
 
 </script>
 </body></html>
