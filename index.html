@@ -758,7 +758,15 @@ const REC_BASE_NOMBRES = new Set(Object.keys(REC));
 // --- LEER RECETAS EXTERNAS GUARDADAS EN EL NAVEGADOR ---
 const recetasGuardadas = JSON.parse(localStorage.getItem('SA_RECETAS_EXT'));
 if (recetasGuardadas) {
-  Object.assign(REC, recetasGuardadas);
+  // Limpiar nombres con comillas residuales antes de cargar
+  const recetasLimpias = {};
+  Object.entries(recetasGuardadas).forEach(([nombre, rec]) => {
+    const nombreLimpio = nombre.replace(/^["'\s]+|["'\s]+$/g, '').trim();
+    if (nombreLimpio) recetasLimpias[nombreLimpio] = rec;
+  });
+  Object.assign(REC, recetasLimpias);
+  // Persistir la versión limpia
+  localStorage.setItem('SA_RECETAS_EXT', JSON.stringify(recetasLimpias));
 }
 
 const DIETAS={g:'General',l:'Liviano',lc:'Liv. c/carne',n:'Niño',a:'Adolescente',b1:'Bebé 1',b2:'Bebé 2',dbt:'DBT',bcb:'BCB',veg:'Vegetariano',cel:'Celíaco',ast:'Astringente',sl:'Súper liviano',ids4:'IDSSI 4',ids5:'IDSSI 5',ids6:'IDSSI 6',ids7:'IDSSI 7',exc:'Excepción'};
@@ -1344,13 +1352,18 @@ function analizarCsvTexto(texto, fileName) {
 function analizarXlsx(buf, fileName) {
   try {
     if (typeof XLSX === 'undefined') {
-      return { ok: false, nombre: fileName, error: 'SheetJS no cargó aún — intentá de nuevo en unos segundos' };
+      return { ok: false, nombre: fileName, error: 'SheetJS no disponible — recargá la página e intentá de nuevo' };
     }
-    // SheetJS necesita Uint8Array, no ArrayBuffer crudo
     const data = new Uint8Array(buf);
-    const wb = XLSX.read(data, { type: 'array' });
+    const wb = XLSX.read(data, { type: 'array', cellText: true, cellDates: false });
+    if (!wb.SheetNames.length) {
+      return { ok: false, nombre: fileName, error: 'El archivo no tiene hojas' };
+    }
     const ws = wb.Sheets[wb.SheetNames[0]];
-    const csv = XLSX.utils.sheet_to_csv(ws);
+    const csv = XLSX.utils.sheet_to_csv(ws, { blankrows: false });
+    if (!csv.trim()) {
+      return { ok: false, nombre: fileName, error: 'Hoja vacía' };
+    }
     return analizarYGuardarReceta(csv, fileName);
   } catch(e) {
     return { ok: false, nombre: fileName, error: e.message };
@@ -1358,32 +1371,62 @@ function analizarXlsx(buf, fileName) {
 }
 
 function analizarYGuardarReceta(texto, fileName) {
+  // Parser CSV robusto que maneja campos con comillas y comas internas
+  function parsearLineaCSV(linea) {
+    const cols = [];
+    let i = 0;
+    while (i < linea.length) {
+      if (linea[i] === '"') {
+        // campo entre comillas
+        let val = '';
+        i++; // saltar la comilla de apertura
+        while (i < linea.length) {
+          if (linea[i] === '"' && linea[i+1] === '"') { val += '"'; i += 2; }
+          else if (linea[i] === '"') { i++; break; }
+          else { val += linea[i++]; }
+        }
+        cols.push(val.trim());
+        if (linea[i] === ',') i++; // saltar coma separadora
+      } else {
+        let start = i;
+        while (i < linea.length && linea[i] !== ',') i++;
+        cols.push(linea.slice(start, i).trim());
+        if (linea[i] === ',') i++;
+      }
+    }
+    return cols;
+  }
+
   const lineas = texto.split(/\r?\n/);
   let nombreReceta = "";
   let ingredientes = [];
 
   if (lineas.length > 0) {
-    let primeraLinea = lineas[0].split(',')[0];
-    if (primeraLinea && primeraLinea.trim() !== '') {
-      nombreReceta = primeraLinea.split('/')[0].trim();
+    // Limpiar BOM, comillas y espacios del título
+    let primeraCol = parsearLineaCSV(lineas[0])[0] || '';
+    primeraCol = primeraCol.replace(/^["'\s]+|["'\s]+$/g, '').trim();
+    if (primeraCol) {
+      nombreReceta = primeraCol.split('/')[0].trim();
     }
   }
   if (!nombreReceta) {
     nombreReceta = fileName.replace(/\.[^/.]+$/, "").split('_')[0].trim();
   }
+  // Capitalizar: primera letra mayúscula, resto minúsculas
+  nombreReceta = nombreReceta.replace(/^["'\s]+|["'\s]+$/g, '').trim();
   nombreReceta = nombreReceta.charAt(0).toUpperCase() + nombreReceta.slice(1).toLowerCase();
 
   for (let i = 1; i < lineas.length; i++) {
     let linea = lineas[i].trim();
     if (!linea) continue;
-    let cols = linea.split(',').map(c => c.trim().replace(/^"|"$/g, ''));
-    let col0 = cols[0] ? cols[0].toLowerCase() : '';
+    let cols = parsearLineaCSV(linea);
+    let col0 = (cols[0] || '').toLowerCase();
     if (!cols[0] || col0 === 'ingredientes' || col0.startsWith('guarnición') || col0.startsWith('fecha')) continue;
     let ing = cols[0];
     let cantStr = cols[2];
-    let med = cols[3] || 'g';
+    let med = (cols[3] || 'g').trim();
     if (ing && cantStr) {
-      let cantNum = cantStr.toLowerCase() === 'c/n' ? 0.1 : parseFloat(cantStr);
+      let cantNum = cantStr.toLowerCase() === 'c/n' ? 0.1 : parseFloat(cantStr.replace(',', '.'));
       if (!isNaN(cantNum)) {
         ingredientes.push({
           i: ing.charAt(0).toUpperCase() + ing.slice(1).toLowerCase(),
