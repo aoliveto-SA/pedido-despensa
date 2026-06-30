@@ -282,7 +282,7 @@ tr:hover td{background:var(--fondo)}
   <div class="card" style="margin-top:12px">
     <div class="card-title">Cronograma de pedidos</div>
     <p style="font-size:12px;color:var(--gris);margin-bottom:10px">
-      Calcula cuándo hay que <strong>pedir</strong> y cuándo debe <strong>llegar</strong> cada ingrediente para que esté disponible con al menos 2 días de margen antes de usarse (para preproducción), respetando que no hay entregas en fin de semana y los días/anticipación de cada proveedor. Podés corregir cualquier fecha a mano (feriados, imprevistos).
+      Organizado por <strong>día de uso</strong> y, dentro de cada día, por <strong>rubro/proveedor</strong>. Calcula automáticamente cuándo debe <strong>llegar</strong> y cuándo hay que <strong>pedir</strong> cada ingrediente para tenerlo con al menos 2 días de margen antes de usarse (para preproducción), sin entregas sábados ni domingos por defecto y según los días/anticipación de cada proveedor. Se actualiza solo cuando cambia el menú; cualquier fecha se puede corregir a mano (feriados, imprevistos).
     </p>
     <div class="form-row" style="align-items:flex-end">
       <div class="form-col"><label>Semana de referencia (lunes)</label><input type="date" id="semanaInicioInput" style="width:160px" onchange="cambiarSemanaInicio(this.value)"></div>
@@ -1234,7 +1234,13 @@ function calcCronograma(){
       });
     });
   });
-  filas.sort((a,b)=>a.fechaPedido-b.fechaPedido);
+  filas.sort((a,b)=>{
+    const da=DIAS_ORDEN.indexOf(a.dia), db=DIAS_ORDEN.indexOf(b.dia);
+    if(da!==db) return da-db;
+    const ra=a.proveedor?a.proveedor.nombre:'\uffff', rb=b.proveedor?b.proveedor.nombre:'\uffff';
+    if(ra!==rb) return ra.localeCompare(rb,'es');
+    return a.nombre.localeCompare(b.nombre,'es');
+  });
   return filas;
 }
 
@@ -1250,34 +1256,50 @@ function renderCronograma(){
   const si=document.getElementById('semanaInicioInput');
   if(si && !si.value) si.value=semanaInicio||mondayActual();
   const filas=calcCronograma();
-  if(!filas.length||!proveedores.length){
-    document.getElementById('cronograma').innerHTML=`<div class="empty">${!proveedores.length?'Cargá al menos un proveedor':'Armá el menú en el paso 1'}</div>`;
+  if(!filas.length){
+    document.getElementById('cronograma').innerHTML='<div class="empty">Armá el menú en el paso 1 para generar el cronograma</div>';
     return;
   }
-  const grupos={};
-  filas.forEach(f=>{const k=f.proveedor?f.proveedor.nombre:'⚠ Sin proveedor asignado';if(!grupos[k])grupos[k]=[];grupos[k].push(f);});
+  // Agrupar primero por día de uso (orden cronológico), y dentro de cada día, por rubro/proveedor
+  const porDia={};
+  filas.forEach(f=>{ if(!porDia[f.dia]) porDia[f.dia]=[]; porDia[f.dia].push(f); });
+  const diasPresentes=DIAS_ORDEN.filter(d=>porDia[d]);
 
-  document.getElementById('cronograma').innerHTML=Object.entries(grupos).map(([g,fs])=>{
-    const prov=fs[0].proveedor;
-    return `<div style="margin-bottom:16px">
-      <div style="font-size:13px;font-weight:600;margin-bottom:6px">${g}${prov?` <span class="prov-badge ${prov.perecedero?'p':''}">Reparte: ${prov.dias} · pide con ${prov.anticipacion}d de anticipación</span>`:''}</div>
-      <div class="card" style="padding:0;overflow:hidden;margin-bottom:0">
-        <table>
-          <thead><tr>
-            <th>Ingrediente</th><th>Necesario para</th><th>Debe llegar</th><th>Pedir el</th><th style="text-align:right">Cant.</th><th></th>
-          </tr></thead>
-          <tbody>
-            ${fs.map(f=>`<tr>
-              <td>${f.nombre}${f.esSopa?' 🍲':''}</td>
-              <td style="font-size:12px">${f.dia}<br><span style="color:var(--gris)">${fmtFecha(f.fechaNecesaria)}</span></td>
-              <td><input type="date" value="${toISODate(f.fechaEntrega)}" style="width:130px;font-size:12px;${f.manualEntrega?'border-color:var(--azul);color:var(--azul-txt);font-weight:600':''}" onchange="setCronOverride('${f.key}','entrega',this.value)"></td>
-              <td><input type="date" value="${toISODate(f.fechaPedido)}" style="width:130px;font-size:12px;${f.manualPedido?'border-color:var(--azul);color:var(--azul-txt);font-weight:600':''}" onchange="setCronOverride('${f.key}','pedido',this.value)"></td>
-              <td class="num" style="text-align:right">${fmtNum(f.cant)} ${f.u}</td>
-              <td>${(f.manualEntrega||f.manualPedido)?`<button class="del" title="Quitar ajuste manual" onclick="setCronOverride('${f.key}','entrega','');setCronOverride('${f.key}','pedido','')">↺</button>`:''}</td>
-            </tr>`).join('')}
-          </tbody>
-        </table>
-      </div>
+  document.getElementById('cronograma').innerHTML=diasPresentes.map(dia=>{
+    const filasDia=porDia[dia];
+    const fecha=filasDia[0].fechaNecesaria;
+    const porRubro={};
+    filasDia.forEach(f=>{const k=f.proveedor?f.proveedor.nombre:'⚠ Sin rubro/proveedor asignado';if(!porRubro[k])porRubro[k]=[];porRubro[k].push(f);});
+    const rubros=Object.keys(porRubro).sort((a,b)=>{
+      if(a.startsWith('⚠'))return 1; if(b.startsWith('⚠'))return -1;
+      return a.localeCompare(b,'es');
+    });
+
+    return `<div class="dia-sec" style="margin-bottom:22px">
+      <div class="dia-title" style="font-size:14px;font-weight:bold;color:var(--texto);border-bottom:3px solid var(--gris);padding-bottom:4px;margin-bottom:10px">📅 ${dia} · ${fmtFecha(fecha)}</div>
+      ${rubros.map(rubro=>{
+        const fs=porRubro[rubro];
+        const prov=fs[0].proveedor;
+        return `<div style="margin-bottom:12px">
+          <div style="font-size:12px;font-weight:600;margin-bottom:6px">🏷 ${rubro}${prov?` <span class="prov-badge ${prov.perecedero?'p':''}">Reparte: ${prov.dias} · pide con ${prov.anticipacion}d de anticipación</span>`:''}</div>
+          <div class="card" style="padding:0;overflow:hidden;margin-bottom:0">
+            <table>
+              <thead><tr>
+                <th>Ingrediente</th><th>Debe llegar</th><th>Pedir el</th><th style="text-align:right">Cant.</th><th></th>
+              </tr></thead>
+              <tbody>
+                ${fs.map(f=>`<tr>
+                  <td>${f.nombre}${f.esSopa?' 🍲':''}</td>
+                  <td><input type="date" value="${toISODate(f.fechaEntrega)}" style="width:130px;font-size:12px;${f.manualEntrega?'border-color:var(--azul);color:var(--azul-txt);font-weight:600':''}" onchange="setCronOverride('${f.key}','entrega',this.value)"></td>
+                  <td><input type="date" value="${toISODate(f.fechaPedido)}" style="width:130px;font-size:12px;${f.manualPedido?'border-color:var(--azul);color:var(--azul-txt);font-weight:600':''}" onchange="setCronOverride('${f.key}','pedido',this.value)"></td>
+                  <td class="num" style="text-align:right">${fmtNum(f.cant)} ${f.u}</td>
+                  <td>${(f.manualEntrega||f.manualPedido)?`<button class="del" title="Quitar ajuste manual" onclick="setCronOverride('${f.key}','entrega','');setCronOverride('${f.key}','pedido','')">↺</button>`:''}</td>
+                </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>`;
+      }).join('')}
     </div>`;
   }).join('');
 }
@@ -1288,16 +1310,16 @@ function exportCronogramaXLSX(){
   const datos=filas.map(f=>({
     'Día de uso':f.dia,
     'Fecha de uso':toISODate(f.fechaNecesaria),
+    'Rubro / Proveedor':f.proveedor?f.proveedor.nombre:'Sin rubro asignado',
     'Ingrediente':f.nombre,
     'Cantidad':fmtNum(f.cant),
     'Unidad':f.u,
-    'Proveedor':f.proveedor?f.proveedor.nombre:'Sin proveedor',
     'Debe llegar':toISODate(f.fechaEntrega),
     'Pedir el':toISODate(f.fechaPedido),
     'Ajuste manual':(f.manualEntrega||f.manualPedido)?'Sí':''
   }));
   const ws=XLSX.utils.json_to_sheet(datos);
-  ws['!cols']=[{wch:12},{wch:12},{wch:28},{wch:10},{wch:8},{wch:22},{wch:12},{wch:12},{wch:12}];
+  ws['!cols']=[{wch:12},{wch:12},{wch:22},{wch:28},{wch:10},{wch:8},{wch:12},{wch:12},{wch:12}];
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,'Cronograma pedidos');
   XLSX.writeFile(wb,'cronograma_pedidos_'+new Date().toISOString().slice(0,10)+'.xlsx');
