@@ -245,6 +245,7 @@ tr:hover td{background:var(--fondo)}
     <button class="chip" data-u="ml" onclick="setFiltro(this)">ml / cc</button>
     <button class="chip" data-u="u" onclick="setFiltro(this)">Unidades</button>
     <button class="chip" data-u="o" onclick="setFiltro(this)">Otros</button>
+    <button class="chip" data-u="s" onclick="setFiltro(this)">🍲 Sopas</button>
   </div>
   <div id="resultado"><div class="empty">Armá el menú en el paso 1</div></div>
 </div>
@@ -905,27 +906,34 @@ function renderCronograma(){
 
 // ─── CÁLCULO ───
 function getMerma(n){const nl=n.toLowerCase();for(const[k,v] of Object.entries(mermas)){if(nl.includes(k))return v/100;}return 0;}
-function getUCat(u){u=u.toLowerCase().replace('.','');if(['g','gr','gramo','gramos','gs','kg'].includes(u))return 'g';if(['ml','cc','l','lt','lts'].includes(u))return 'ml';if(['unidad','unidades','un','bolsa','bolsas','sobre','sobres'].includes(u))return 'u';return 'o';}
+
+// CORRECCIÓN CLAVE: Agregamos el segundo parámetro para detectar si es sopa por el nombre del ingrediente
+function getUCat(u, nombreIngrediente = ''){
+  if (nombreIngrediente && nombreIngrediente.toLowerCase().includes('sopa')) return 's';
+  u=u.toLowerCase().replace('.','');
+  if(['g','gr','gramo','gramos','gs','kg'].includes(u))return 'g';
+  if(['ml','cc','l','lt','lts'].includes(u))return 'ml';
+  if(['unidad','unidades','un','bolsa','bolsas','sobre','sobres'].includes(u))return 'u';
+  return 'o';
+}
 
 function calcTotales(){
   const tot={};
   items.forEach(it=>{
     (it.ingredientes||[]).forEach(ing=>{
-      const cat=getUCat(ing.u);
+      // Pasamos la unidad Y el nombre del ingrediente para clasificarlo bien
+      const cat=getUCat(ing.u, ing.i);
       const key=ing.i.toLowerCase().trim()+'|||'+cat;
       if(!tot[key]) tot[key]={nombre:ing.i,cat,u:ing.u,cant:0};
       
-      // Si el ingrediente contiene la palabra "sopa", tratamos de normalizar según cómo se cargó la cantidad
-      if(ing.i.toLowerCase().includes('sopa')){
+      // Si fue marcado como categoría 's' (Sopa), normalizamos según los gramos
+      if(cat === 's'){
         if(ing.c > 10){
-          // Si cargaste gramos grandes en la receta (ej: 4000), lo divide por 10.000 para llevarlo a bolsas
           tot[key].cant += (ing.c / 10000) * it.porciones;
         } else {
-          // Si cargaste un número chico (ej: 1 o 0.5), ya representa la proporción directa de bolsas
           tot[key].cant += ing.c * it.porciones;
         }
       } else {
-        // Todo lo que no sea sopa se calcula de manera completamente normal
         tot[key].cant += ing.c * it.porciones;
       }
     });
@@ -936,9 +944,8 @@ function calcTotales(){
     let cantFinal = r.cant * (1+m);
     let uniFinal = r.u;
     
-    // Si es sopa, lo redondeamos para arriba (bolsas enteras)
-    if(r.nombre.toLowerCase().includes('sopa')){
-      cantFinal = Math.ceil(cantFinal);
+    if(r.cat === 's'){
+      cantFinal = Math.ceil(cantFinal); // Redondeo hacia arriba (bolsas enteras)
       uniFinal = cantFinal === 1 ? 'bolsa (10kg)' : 'bolsas (10kg)';
     }
     
@@ -947,7 +954,6 @@ function calcTotales(){
 }
 
 function fmtNum(n){
-  // Si es un número entero exacto, lo muestra sin decimales innecesarios
   if(Number.isInteger(n)) return n.toLocaleString('es');
   if(n>=10000)return(n/1000).toFixed(1)+'k';
   if(n>=1)return(Math.round(n*10)/10).toLocaleString('es');
@@ -964,9 +970,8 @@ function renderPedido(){
   
   const vis=filtroU==='todo'?tots:tots.filter(r=>r.cat===filtroU);
   if(!vis.length){document.getElementById('resultado').innerHTML='<div class="empty">Sin ingredientes para mostrar</div>';return;}
-  const bc=c=>c==='g'?'b-g':c==='ml'?'b-ml':c==='u'?'b-u':'b-o';
+  const bc=c=>c==='g'?'b-g':c==='ml'?'b-ml':c==='u'?'b-u':c==='s'?'b-u':'b-o';
 
-  // Función auxiliar interna para armar las tablas
   const generarTablaHTML = (lista, esVistaConsolidado, mostrarProveedor = false) => {
     return `<div class="card" style="padding:0;overflow:hidden;margin-bottom:20px;">
       <table>
@@ -983,13 +988,12 @@ function renderPedido(){
         <tbody>
           ${lista.map(r=>{
             const p = mostrarProveedor ? getProv(r.nombre) : null;
-            const esSopa = r.nombre.toLowerCase().includes('sopa');
             return `<tr>
               <td>${r.nombre}</td>
               <td class="num-dim">${fmtNum(r.cant)}</td>
               ${esVistaConsolidado ? `<td style="text-align:right;color:var(--rojo);font-size:12px;font-weight:500">${r.merma>0?'+'+Math.round(r.merma*100)+'%':'—'}</td>` : ''}
               <td class="num" style="font-size:15px;color:var(--azul)">${fmtNum(r.cantConMerma)}</td>
-              <td><span class="badge ${esSopa ? 'b-u' : bc(r.cat)}">${r.u}</span></td>
+              <td><span class="badge ${bc(r.cat)}">${r.u}</span></td>
               ${mostrarProveedor ? `<td>${p?`<span class="prov-badge ${p.perecedero?'p':''}">${p.nombre} · ${p.dias}</span>`:''}</td>` : ''}
             </tr>`;
           }).join('')}
@@ -999,9 +1003,8 @@ function renderPedido(){
   };
 
   if(vista==='consolidado'){
-    // CORRECCIÓN AQUÍ: Forzamos minúsculas para que encuentre "Sopa" o "sopa" sin fallar
-    const listaSopas = vis.filter(r => r.nombre.toLowerCase().includes('sopa'));
-    const listaOtros = vis.filter(r => !r.nombre.toLowerCase().includes('sopa'));
+    const listaSopas = vis.filter(r => r.cat === 's');
+    const listaOtros = vis.filter(r => r.cat !== 's');
 
     let htmlFinal = '';
     if(listaSopas.length > 0) {
@@ -1022,11 +1025,11 @@ function renderPedido(){
     for(const[dia,dItems] of Object.entries(porDia)){
       const totDia={};
       dItems.forEach(it=>{(it.ingredientes||[]).forEach(ing=>{
-        const cat=getUCat(ing.u);
+        const cat=getUCat(ing.u, ing.i);
         const key=ing.i.toLowerCase().trim()+'|||'+cat;
         if(!totDia[key])totDia[key]={nombre:ing.i,cat,u:ing.u,cant:0};
         
-        if(ing.i.toLowerCase().includes('sopa') || (it.nombre && it.nombre.toLowerCase().includes('sopa'))){
+        if(cat === 's'){
           if(ing.c > 10) totDia[key].cant += (ing.c / 10000) * it.porciones;
           else totDia[key].cant += ing.c * it.porciones;
         } else {
@@ -1038,7 +1041,7 @@ function renderPedido(){
         const m=getMerma(r.nombre);
         let cFinal = r.cant*(1+m);
         let uFinal = r.u;
-        if(r.nombre.toLowerCase().includes('sopa')){
+        if(r.cat === 's'){
           cFinal = Math.ceil(cFinal);
           uFinal = cFinal === 1 ? 'bolsa (10kg)' : 'bolsas (10kg)';
         }
@@ -1048,8 +1051,8 @@ function renderPedido(){
       const visDia=filtroU==='todo'?rowsDia:rowsDia.filter(r=>r.cat===filtroU);
       
       if(visDia.length > 0) {
-        const sopasDia = visDia.filter(r => r.nombre.toLowerCase().includes('sopa'));
-        const otrosDia = visDia.filter(r => !r.nombre.toLowerCase().includes('sopa'));
+        const sopasDia = visDia.filter(r => r.cat === 's');
+        const otrosDia = visDia.filter(r => r.cat !== 's');
 
         html += `<div class="dia-sec" style="margin-top:20px;"><div class="dia-title" style="font-size:14px;font-weight:bold;color:var(--texto);border-bottom:3px solid var(--gris);">📅 ${dia}</div>`;
         if(sopasDia.length > 0) {
