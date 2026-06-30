@@ -256,7 +256,8 @@ tr:hover td{background:var(--fondo)}
   <div class="card">
     <div class="card-title">Agregar proveedor</div>
     <div class="form-row">
-      <div class="form-col grow"><label>Nombre</label><input type="text" id="pNombre" placeholder="Ej: Frigorífico Norte"></div>
+      <div class="form-col grow"><label>Rubro (categoría para el cronograma)</label><input type="text" id="pRubro" placeholder="Ej: Carnicería, Verdulería, Almacén"></div>
+      <div class="form-col grow"><label>Nombre proveedor</label><input type="text" id="pNombre" placeholder="Ej: Frigorífico Norte"></div>
       <div class="form-col grow"><label>Palabras clave (separadas por coma)</label><input type="text" id="pGrupo" placeholder="Ej: lomo, bife, nalga, peceto"></div>
       <div class="form-col"><label>Perecedero</label>
         <select id="pPerec" style="width:90px"><option value="si">Sí</option><option value="no">No</option></select>
@@ -282,7 +283,7 @@ tr:hover td{background:var(--fondo)}
   <div class="card" style="margin-top:12px">
     <div class="card-title">Cronograma de pedidos</div>
     <p style="font-size:12px;color:var(--gris);margin-bottom:10px">
-      Organizado por <strong>día de uso</strong> y, dentro de cada día, por <strong>rubro/proveedor</strong>. Calcula automáticamente cuándo debe <strong>llegar</strong> y cuándo hay que <strong>pedir</strong> cada ingrediente para tenerlo con al menos 2 días de margen antes de usarse (para preproducción), sin entregas sábados ni domingos por defecto y según los días/anticipación de cada proveedor. Se actualiza solo cuando cambia el menú; cualquier fecha se puede corregir a mano (feriados, imprevistos).
+      Organizado por <strong>día de uso</strong> y, dentro de cada día, por <strong>rubro</strong>. Calcula automáticamente cuándo debe <strong>llegar</strong> y cuándo hay que <strong>pedir</strong> cada ingrediente para tenerlo con al menos 2 días de margen antes de usarse (para preproducción), sin entregas sábados ni domingos por defecto. Se actualiza solo cuando cambia el menú; cualquier fecha se puede corregir a mano (feriados, imprevistos).
     </p>
     <div class="form-row" style="align-items:flex-end">
       <div class="form-col"><label>Semana de referencia (lunes)</label><input type="date" id="semanaInicioInput" style="width:160px" onchange="cambiarSemanaInicio(this.value)"></div>
@@ -1091,15 +1092,17 @@ const DOW_A_KEY={1:'lun',2:'mar',3:'mie',4:'jue',5:'vie'}; // JS getDay(): 1=lun
 function toggleDiaChip(btn){btn.classList.toggle('on');}
 
 function addProv(){
+  const rb=document.getElementById('pRubro').value.trim();
   const n=document.getElementById('pNombre').value.trim();
   const g=document.getElementById('pGrupo').value.trim();
   const p=document.getElementById('pPerec').value;
   const antic=parseInt(document.getElementById('pAntic').value,10);
   const diasReparto=[...document.querySelectorAll('#pDiasChips .dia-chip-add.on')].map(b=>b.dataset.d);
-  if(!n||!g)return;
+  if(!rb||!n||!g)return;
   if(!diasReparto.length){mostrarNotif('Elegí al menos un día de reparto','warn');return;}
   const diasOrden=DIA_KEYS.filter(k=>diasReparto.includes(k));
   proveedores.push({
+    rubro:rb,
     nombre:n,
     palabras:g.toLowerCase().split(',').map(x=>x.trim()),
     diasReparto:diasOrden,
@@ -1108,19 +1111,21 @@ function addProv(){
     perecedero:p==='si',
     id:Date.now()
   });
-  document.getElementById('pNombre').value='';document.getElementById('pGrupo').value='';document.getElementById('pAntic').value='2';
+  document.getElementById('pRubro').value='';document.getElementById('pNombre').value='';document.getElementById('pGrupo').value='';document.getElementById('pAntic').value='2';
   document.querySelectorAll('#pDiasChips .dia-chip-add.on').forEach(b=>b.classList.remove('on'));
   renderProveedores();renderCronograma();guardarEstado();
 }
 function borrarProv(id){proveedores=proveedores.filter(p=>p.id!==id);renderProveedores();renderCronograma();guardarEstado();}
+function setRubroProv(id,valor){const p=proveedores.find(p=>p.id===id);if(p){p.rubro=valor.trim();renderCronograma();guardarEstado();}}
 function getProv(n){const nl=n.toLowerCase();return proveedores.find(p=>p.palabras.some(pal=>nl.includes(pal)))||null;}
 function renderProveedores(){
   const el=document.getElementById('provList');
   if(!proveedores.length){el.innerHTML='<div class="empty">Sin proveedores</div>';return;}
   el.innerHTML=`<div class="ilist">${proveedores.map(p=>{
     const diasTxt=(p.diasReparto&&p.diasReparto.length)?p.diasReparto.map(k=>DIA_LABELS[k]||k).join(', '):(p.dias||'—');
-    return `<div class="irow" style="grid-template-columns:auto 1fr auto auto auto auto">
-      <span style="font-weight:600">${p.nombre}</span>
+    return `<div class="irow" style="grid-template-columns:auto auto 1fr auto auto auto auto">
+      <input type="text" value="${p.rubro||''}" placeholder="Rubro..." style="width:110px;font-size:12px;font-weight:600;${p.rubro?'':'border-color:var(--rojo)'}" onchange="setRubroProv(${p.id},this.value)" title="Rubro/categoría usada en el cronograma">
+      <span style="font-weight:500">${p.nombre}</span>
       <span style="color:var(--gris)">${p.palabras.join(', ')}</span>
       <span style="font-size:12px" title="Días de reparto">🚚 ${diasTxt}</span>
       <span style="font-size:12px" title="Anticipación de pedido">⏱ ${p.anticipacion!=null?p.anticipacion:'2'}d antes</span>
@@ -1237,7 +1242,7 @@ function calcCronograma(){
   filas.sort((a,b)=>{
     const da=DIAS_ORDEN.indexOf(a.dia), db=DIAS_ORDEN.indexOf(b.dia);
     if(da!==db) return da-db;
-    const ra=a.proveedor?a.proveedor.nombre:'\uffff', rb=b.proveedor?b.proveedor.nombre:'\uffff';
+    const ra=a.proveedor?(a.proveedor.rubro||a.proveedor.nombre):'\uffff', rb=b.proveedor?(b.proveedor.rubro||b.proveedor.nombre):'\uffff';
     if(ra!==rb) return ra.localeCompare(rb,'es');
     return a.nombre.localeCompare(b.nombre,'es');
   });
@@ -1269,7 +1274,7 @@ function renderCronograma(){
     const filasDia=porDia[dia];
     const fecha=filasDia[0].fechaNecesaria;
     const porRubro={};
-    filasDia.forEach(f=>{const k=f.proveedor?f.proveedor.nombre:'⚠ Sin rubro/proveedor asignado';if(!porRubro[k])porRubro[k]=[];porRubro[k].push(f);});
+    filasDia.forEach(f=>{const k=f.proveedor?(f.proveedor.rubro||f.proveedor.nombre):'⚠ Sin rubro asignado';if(!porRubro[k])porRubro[k]=[];porRubro[k].push(f);});
     const rubros=Object.keys(porRubro).sort((a,b)=>{
       if(a.startsWith('⚠'))return 1; if(b.startsWith('⚠'))return -1;
       return a.localeCompare(b,'es');
@@ -1279,9 +1284,8 @@ function renderCronograma(){
       <div class="dia-title" style="font-size:14px;font-weight:bold;color:var(--texto);border-bottom:3px solid var(--gris);padding-bottom:4px;margin-bottom:10px">📅 ${dia} · ${fmtFecha(fecha)}</div>
       ${rubros.map(rubro=>{
         const fs=porRubro[rubro];
-        const prov=fs[0].proveedor;
         return `<div style="margin-bottom:12px">
-          <div style="font-size:12px;font-weight:600;margin-bottom:6px">🏷 ${rubro}${prov?` <span class="prov-badge ${prov.perecedero?'p':''}">Reparte: ${prov.dias} · pide con ${prov.anticipacion}d de anticipación</span>`:''}</div>
+          <div style="font-size:12px;font-weight:600;margin-bottom:6px">🏷 ${rubro}</div>
           <div class="card" style="padding:0;overflow:hidden;margin-bottom:0">
             <table>
               <thead><tr>
@@ -1310,7 +1314,7 @@ function exportCronogramaXLSX(){
   const datos=filas.map(f=>({
     'Día de uso':f.dia,
     'Fecha de uso':toISODate(f.fechaNecesaria),
-    'Rubro / Proveedor':f.proveedor?f.proveedor.nombre:'Sin rubro asignado',
+    'Rubro':f.proveedor?(f.proveedor.rubro||f.proveedor.nombre):'Sin rubro asignado',
     'Ingrediente':f.nombre,
     'Cantidad':fmtNum(f.cant),
     'Unidad':f.u,
