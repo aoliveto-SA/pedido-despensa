@@ -1011,12 +1011,25 @@ function calcTotales(){
     const tieneSopa=(it.recetas||[]).some(r=>REC[r]&&REC[r].t==='SO');
     if(tieneSopa) porcionesTotalSopa += it.porciones;
 
+    // IMPORTANTE: Si el combo tiene sopa, NO agregamos los ingredientes individuales de sopa
+    // Solo agregamos los de otros platos
     (it.ingredientes||[]).forEach((ing,idx)=>{
+      // Saltar si este ingrediente viene de una receta de sopa
+      if(tieneSopa) {
+        // Verificar si es un ingrediente de sopa (comparar con recetas SO)
+        const esDelRecetaSopa = (it.recetas||[]).some(r=>{
+          if(REC[r] && REC[r].t==='SO') {
+            return REC[r].i.some(ingRec => ingRec.i.toLowerCase() === ing.i.toLowerCase());
+          }
+          return false;
+        });
+        if(esDelRecetaSopa) return; // Saltar este ingrediente
+      }
+      
       const cat=getUCat(ing.u);
       const key=ing.i.toLowerCase().trim()+'|||'+cat;
       if(!tot[key]) tot[key]={nombre:ing.i,cat,u:ing.u,cant:0,esSopa:false};
       tot[key].cant += ing.c * it.porciones;
-      if(tieneSopa) tot[key].esSopa=true;
     });
   });
 
