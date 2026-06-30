@@ -1435,9 +1435,19 @@ function analizarYGuardarReceta(texto, fileName) {
   }
 
   if (nombreReceta && ingredientes.length > 0) {
+    // ARREGLO: Detectar tipo automáticamente por nombre
+    let tipoReceta = "PP"; // Tipo por defecto
+    const nombrLower = nombreReceta.toLowerCase();
+    if (nombrLower.includes('sopa')) tipoReceta = 'SO';
+    else if (nombrLower.includes('puré') || nombrLower.includes('pure')) tipoReceta = 'SO';
+    else if (nombrLower.includes('crema')) tipoReceta = 'SO';
+    else if (nombrLower.includes('guarnición') || nombrLower.includes('guarnicion')) tipoReceta = 'GU';
+    else if (nombrLower.includes('entrada')) tipoReceta = 'EN';
+    else if (nombrLower.includes('postre') || nombrLower.includes('budín') || nombrLower.includes('budin')) tipoReceta = 'PO';
+    
     const esNueva = !REC[nombreReceta];
-    REC[nombreReceta] = { t: "PP", i: ingredientes };
-    return { ok: true, nombre: nombreReceta, cantidad: ingredientes.length, nueva: esNueva };
+    REC[nombreReceta] = { t: tipoReceta, i: ingredientes };
+    return { ok: true, nombre: nombreReceta, cantidad: ingredientes.length, nueva: esNueva, tipo: tipoReceta };
   } else {
     return { ok: false, nombre: fileName };
   }
@@ -1520,7 +1530,7 @@ function renderGestorRecetas() {
 function toggleRecSel(nombre) {
   if (recSeleccionadas.has(nombre)) recSeleccionadas.delete(nombre);
   else recSeleccionadas.add(nombre);
-  renderGestorRecetas(); 
+  renderGestorRecetas();
 }
 
 function seleccionarTodasRec() {
