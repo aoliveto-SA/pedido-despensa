@@ -1208,9 +1208,11 @@ async function procesarZIP(file) {
   try {
     const zip = await JSZip.loadAsync(file);
     const archivos = [];
-    zip.forEach((path, entry) => {
-      if (!entry.dir && /\.(csv|txt)$/i.test(entry.name)) {
-        archivos.push({ nombre: entry.name.split('/').pop(), entry });
+    zip.forEach((rutaCompleta, entry) => {
+      // Usamos rutaCompleta para detectar la extensión, así funciona con subcarpetas anidadas
+      if (!entry.dir && /\.(csv|txt)$/i.test(rutaCompleta)) {
+        // El nombre visible es solo el archivo, sin la ruta de carpetas
+        archivos.push({ nombre: rutaCompleta.split('/').pop(), entry });
       }
     });
 
