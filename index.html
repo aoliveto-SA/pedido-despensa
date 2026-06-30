@@ -7,7 +7,7 @@
 :root{
   --verde:#16a34a;--verde-claro:#dcfce7;--verde-txt:#166534;
   --azul:#2563eb;--azul-claro:#dbeafe;--azul-txt:#1e40af;
-  --rojo:#dc2626;--amarillo:#fef9c3;--amarillo-txt:#854d0e; 
+  --rojo:#dc2626;--amarillo:#fef9c3;--amarillo-txt:#854d0e;
   --borde:#e5e7eb;--fondo:#f9fafb;--blanco:#fff;--gris:#6b7280;
   --texto:#111827;--radio:8px;
 }
@@ -233,7 +233,7 @@ tr:hover td{background:var(--fondo)}
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px;flex-wrap:wrap">
     <div class="sums" id="sumCards" style="flex:1;margin:0"></div>
     <div style="display:flex;gap:6px">
-      <button class="btn btn-s" onclick="exportXLSX()">↓ XLSX</button>
+      <button class="btn btn-s" onclick="exportCSV()">↓ CSV</button>
       <button class="btn btn-s" id="btnCopiar" onclick="copiar()">⎘ Copiar</button>
     </div>
   </div>
@@ -363,14 +363,6 @@ tr:hover td{background:var(--fondo)}
 </div>
 
 <script>
-// ════════════════════════════════════════════
-// CONFIGURACIÓN SOPAS
-// ════════════════════════════════════════════
-const SOPA_PORCIONES_POR_BOLSA = 30;
-const SOPA_MIX_BASE = [
-  {i:'Mix base sopa', c:1, u:'bolsa'},
-];
-
 // ════════════════════════════════════════════
 // CUADRO MACRO
 // ════════════════════════════════════════════
@@ -1195,25 +1187,13 @@ function copiar(){
     setTimeout(()=>{b.innerHTML=orig;b.style.color='';},2000);
   });
 }
-function exportXLSX(){
+function exportCSV(){
   const tots=calcTotales();
-  const datos = tots.map(r=>{
-    const p=getProv(r.nombre);
-    return {
-      'Ingrediente': r.nombre,
-      'Cantidad receta': fmtNum(r.cant),
-      'Merma %': Math.round(r.merma*100),
-      'Cantidad a pedir': fmtNum(r.cantConMerma),
-      'Unidad': r.u,
-      'Proveedor': p ? p.nombre : '',
-      'Días entrega': p ? p.dias : ''
-    };
-  });
-  
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.json_to_sheet(datos);
-  XLSX.utils.book_append_sheet(wb, ws, 'Pedido');
-  XLSX.writeFile(wb, 'pedido_despensa_'+new Date().toISOString().slice(0,10)+'.xlsx');
+  const csv='\uFEFFIngrediente,Cantidad receta,Merma %,Cantidad a pedir,Unidad,Proveedor,Días entrega\n'+tots.map(r=>{const p=getProv(r.nombre);return`"${r.nombre}",${fmtNum(r.cant)},${Math.round(r.merma*100)},${fmtNum(r.cantConMerma)},"${r.u}","${p?p.nombre:''}","${p?p.dias:''}"`}).join('\n');
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download='pedido_despensa_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
 }
 
 // ─── TABS ───
@@ -1455,14 +1435,9 @@ function analizarYGuardarReceta(texto, fileName) {
   }
 
   if (nombreReceta && ingredientes.length > 0) {
-    // Detectar SOLO si la palabra es "Sopa" (ignorando mayúsculas/minúsculas)
-    let tipoReceta = "PP"; // Tipo por defecto
-    const nombrLower = nombreReceta.toLowerCase();
-    if (nombrLower.includes('sopa')) tipoReceta = 'SO';
-    
     const esNueva = !REC[nombreReceta];
-    REC[nombreReceta] = { t: tipoReceta, i: ingredientes };
-    return { ok: true, nombre: nombreReceta, cantidad: ingredientes.length, nueva: esNueva, tipo: tipoReceta };
+    REC[nombreReceta] = { t: "PP", i: ingredientes };
+    return { ok: true, nombre: nombreReceta, cantidad: ingredientes.length, nueva: esNueva };
   } else {
     return { ok: false, nombre: fileName };
   }
