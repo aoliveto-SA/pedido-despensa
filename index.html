@@ -936,8 +936,9 @@ function renderPedido(){
       // --- AJUSTE DE SOPA EN VISTA CONSOLIDADO ---
       let cantMostrar = r.cantConMerma;
       let uniMostrar = r.u;
-      if (r.nombre.toLowerCase().includes('sopa') && r.nombre.toLowerCase().includes('verdura')) {
-        cantMostrar = Math.ceil(cantMostrar / 10);
+      if (r.nombre.toLowerCase().includes('sopa')) {
+        // Como viene en gramos (g), 10 kg son 10000 gramos. Dividimos por 10000.
+        cantMostrar = Math.ceil(cantMostrar / 10000);
         uniMostrar = cantMostrar === 1 ? 'bolsa (10kg)' : 'bolsas (10kg)';
       }
       return `<tr><td>${r.nombre}</td><td class="num-dim">${fmtNum(r.cant)}</td><td style="text-align:right;color:var(--rojo);font-size:12px;font-weight:500">${r.merma>0?'+'+Math.round(r.merma*100)+'%':'—'}</td><td class="num" style="font-size:15px;color:var(--azul)">${fmtNum(cantMostrar)}</td><td><span class="badge ${bc(r.cat)}">${uniMostrar}</span></td></tr>`;
@@ -956,8 +957,9 @@ function renderPedido(){
         // --- AJUSTE DE SOPA EN VISTA POR DÍA ---
         let cantMostrar = r.cantConMerma;
         let uniMostrar = r.u;
-        if (r.nombre.toLowerCase().includes('sopa') && r.nombre.toLowerCase().includes('verdura')) {
-          cantMostrar = Math.ceil(cantMostrar / 10);
+        if (r.nombre.toLowerCase().includes('sopa')) {
+          // Dividimos por 10000 gramos para pasar a bolsas de 10kg
+          cantMostrar = Math.ceil(cantMostrar / 10000);
           uniMostrar = cantMostrar === 1 ? 'bolsa (10kg)' : 'bolsas (10kg)';
         }
         return `<tr><td>${r.nombre}</td><td class="num-dim">${fmtNum(r.cant)}</td><td class="num" style="color:var(--azul)">${fmtNum(cantMostrar)}</td><td><span class="badge ${bc(r.cat)}">${uniMostrar}</span></td><td>${p?`<span class="prov-badge ${p.perecedero?'p':''}">${p.nombre} · ${p.dias}</span>`:''}</td></tr>`;
