@@ -236,6 +236,7 @@ tr:hover td{background:var(--fondo)}
     <div class="sums" id="sumCards" style="flex:1;margin:0"></div>
     <div style="display:flex;gap:6px">
       <button class="btn btn-s" onclick="exportCSV()">↓ CSV</button>
+      <button class="btn btn-g" onclick="exportXLSXPorDia()">↓ Excel por día</button>
       <button class="btn btn-s" id="btnCopiar" onclick="copiar()">⎘ Copiar</button>
     </div>
   </div>
@@ -1265,6 +1266,84 @@ function exportCSV(){
   a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
   a.download='pedido_despensa_'+new Date().toISOString().slice(0,10)+'.csv';
   a.click();
+}
+
+function exportXLSXPorDia(){
+  if(!items.length){mostrarNotif('No hay nada cargado para exportar','warn');return;}
+
+  // Agrupamos por día+servicio, igual que la vista "Por día"
+  const porDia={};
+  const ordenDias=[]; // para mantener el orden en que aparecen
+  items.forEach(it=>{
+    const k=`${it.dia} - ${it.srv}`;
+    if(!porDia[k]){porDia[k]=[];ordenDias.push(k);}
+    porDia[k].push(it);
+  });
+
+  const wb = XLSX.utils.book_new();
+  const nombresUsados = {};
+
+  ordenDias.forEach(dia=>{
+    const dItems = porDia[dia];
+    const totDia={};
+    let porcionesSopaDia=0;
+
+    dItems.forEach(it=>{
+      const tieneSopa=(it.recetas||[]).some(r=>REC[r]&&REC[r].t==='SO');
+      if(tieneSopa) porcionesSopaDia += it.porciones;
+      (it.ingredientes||[]).forEach(ing=>{
+        const cat=getUCat(ing.u);
+        const key=ing.i.toLowerCase().trim()+'|||'+cat;
+        if(!totDia[key]) totDia[key]={nombre:ing.i,cat,u:ing.u,cant:0,esSopa:false};
+        totDia[key].cant += ing.c * it.porciones;
+        if(tieneSopa) totDia[key].esSopa=true;
+      });
+    });
+
+    if(porcionesSopaDia>0){
+      const factor=porcionesSopaDia/SOPA_PORCIONES_POR_BOLSA;
+      SOPA_MIX_BASE.forEach(ing=>{
+        const cat=getUCat(ing.u);
+        const key=ing.i.toLowerCase().trim()+'|||'+cat;
+        if(!totDia[key]) totDia[key]={nombre:ing.i,cat,u:ing.u,cant:0,esSopa:false};
+        totDia[key].cant += ing.c*factor;
+        totDia[key].esSopa=true;
+      });
+    }
+
+    const rowsDia=Object.values(totDia).map(r=>{
+      const m=getMerma(r.nombre);
+      return {...r, merma:m, cantConMerma: r.cant*(1+m)};
+    }).sort((a,b)=>a.nombre.localeCompare(b.nombre,'es'));
+
+    const datos = rowsDia.map(r=>{
+      const p=getProv(r.nombre);
+      return {
+        'Ingrediente': r.nombre,
+        'Cantidad receta': Math.round(r.cant*100)/100,
+        'Merma %': Math.round(r.merma*100),
+        'Cantidad a pedir': Math.round(r.cantConMerma*100)/100,
+        'Unidad': r.u,
+        'Proveedor': p?p.nombre:'',
+        'Días entrega': p?p.dias:''
+      };
+    });
+
+    const ws = XLSX.utils.json_to_sheet(datos);
+    ws['!cols']=[{wch:30},{wch:14},{wch:9},{wch:15},{wch:8},{wch:20},{wch:12}];
+
+    // Excel limita los nombres de hoja a 31 caracteres y no admite : \ / ? * [ ]
+    let nombreHoja = dia.replace(/[:\\\/\?\*\[\]]/g,'-').slice(0,31);
+    if(nombresUsados[nombreHoja]){
+      nombresUsados[nombreHoja]++;
+      nombreHoja = nombreHoja.slice(0,28)+'_'+nombresUsados[nombreHoja];
+    } else {
+      nombresUsados[nombreHoja]=1;
+    }
+    XLSX.utils.book_append_sheet(wb, ws, nombreHoja);
+  });
+
+  XLSX.writeFile(wb, 'pedido_despensa_por_dia_'+new Date().toISOString().slice(0,10)+'.xlsx');
 }
 
 // ─── TABS ───
