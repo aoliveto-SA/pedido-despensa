@@ -235,7 +235,6 @@ tr:hover td{background:var(--fondo)}
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px;flex-wrap:wrap">
     <div class="sums" id="sumCards" style="flex:1;margin:0"></div>
     <div style="display:flex;gap:6px">
-      <button class="btn btn-s" onclick="exportCSV()">↓ CSV</button>
       <button class="btn btn-g" onclick="exportXLSXPorDia()">↓ Excel por día</button>
       <button class="btn btn-s" id="btnCopiar" onclick="copiar()">⎘ Copiar</button>
     </div>
@@ -1286,8 +1285,7 @@ function exportXLSXPorDia(){
   ordenDias.forEach(dia=>{
     const dItems = porDia[dia];
     const totDia={};
-    let porcionesSopaDia=0;
-
+    let porcionesSopaDia=0, bolsasDia=0;
     dItems.forEach(it=>{
       const tieneSopa=(it.recetas||[]).some(r=>REC[r]&&REC[r].t==='SO');
       if(tieneSopa) porcionesSopaDia += it.porciones;
@@ -1301,6 +1299,7 @@ function exportXLSXPorDia(){
     });
 
     if(porcionesSopaDia>0){
+      bolsasDia=Math.ceil(porcionesSopaDia/SOPA_PORCIONES_POR_BOLSA);
       const factor=porcionesSopaDia/SOPA_PORCIONES_POR_BOLSA;
       SOPA_MIX_BASE.forEach(ing=>{
         const cat=getUCat(ing.u);
@@ -1329,7 +1328,10 @@ function exportXLSXPorDia(){
       };
     });
 
-    const ws = XLSX.utils.json_to_sheet(datos);
+    const ws = XLSX.utils.aoa_to_sheet(
+      bolsasDia>0 ? [[`🍲 Mix de sopa: ${bolsasDia} ${bolsasDia===1?'bolsa':'bolsas'} (10kg c/u)`],[]] : []
+    );
+    XLSX.utils.sheet_add_json(ws, datos, { origin: bolsasDia>0 ? -1 : 0 });
     ws['!cols']=[{wch:30},{wch:14},{wch:9},{wch:15},{wch:8},{wch:20},{wch:12}];
 
     // Excel limita los nombres de hoja a 31 caracteres y no admite : \ / ? * [ ]
