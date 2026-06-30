@@ -2,7 +2,7 @@
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Pedido a Despensa — Sanatorio Allende Cerro</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script> 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
   --verde:#16a34a;--verde-claro:#dcfce7;--verde-txt:#166534;
@@ -1435,15 +1435,10 @@ function analizarYGuardarReceta(texto, fileName) {
   }
 
   if (nombreReceta && ingredientes.length > 0) {
-    // ARREGLO: Detectar tipo automáticamente por nombre
+    // ARREGLO: Detectar SOLO si la palabra es "Sopa" (ignorando mayúsculas/minúsculas)
     let tipoReceta = "PP"; // Tipo por defecto
     const nombrLower = nombreReceta.toLowerCase();
     if (nombrLower.includes('sopa')) tipoReceta = 'SO';
-    else if (nombrLower.includes('puré') || nombrLower.includes('pure')) tipoReceta = 'SO';
-    else if (nombrLower.includes('crema')) tipoReceta = 'SO';
-    else if (nombrLower.includes('guarnición') || nombrLower.includes('guarnicion')) tipoReceta = 'GU';
-    else if (nombrLower.includes('entrada')) tipoReceta = 'EN';
-    else if (nombrLower.includes('postre') || nombrLower.includes('budín') || nombrLower.includes('budin')) tipoReceta = 'PO';
     
     const esNueva = !REC[nombreReceta];
     REC[nombreReceta] = { t: tipoReceta, i: ingredientes };
