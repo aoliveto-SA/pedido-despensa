@@ -668,13 +668,13 @@ const REC = {
 "Ensalada remolacha y huevo":{t:"EN",i:[{i:"Remolacha entera",c:80,u:"g"},{i:"Huevo",c:26,u:"g"}]},
 "Ensalada rusa":{t:"EN",i:[{i:"Zanahoria cubo",c:40,u:"g"},{i:"Papa cubo",c:40,u:"g"},{i:"Arvejas congeladas",c:10,u:"g"},{i:"Mayonesa",c:1,u:"sobre"}]},
 "Ensalada de lenteja y huevo":{t:"EN",i:[{i:"Lentejas",c:40,u:"g"},{i:"Huevo",c:52,u:"g"}]},
-"Sopa crema de verduras":{t:"SO",i:[{i:"Mix sopa",c:1,u:"bolsa"},{i:"Queso crema",c:2,u:"g"}]},
-"Sopa crema de espárragos":{t:"SO",i:[{i:"Mix sopa",c:1,u:"bolsa"},{i:"Espárragos congelados",c:56,u:"g"},{i:"Cebolla entera",c:8,u:"g"},{i:"Queso Tybo",c:10,u:"g"}]},
-"Sopa de calabaza":{t:"SO",i:[{i:"Mix sopa",c:2,u:"bolsa"},{i:"Calabaza entera",c:20,u:"g"}]},
-"Sopa de Arroz":{t:"SO",i:[{i:"Mix sopa",c:2,u:"bolsa"},{i:"Arroz parborizado",c:10,u:"g"}]},
-"Sopa Munición":{t:"SO",i:[{i:"Mix sopa",c:1,u:"bolsa"},{i:"Fideos munición crudos",c:5,u:"g"}]},
-"Sopa de sémola":{t:"SO",i:[{i:"Mix sopa",c:1,u:"bolsa"},{i:"Sémola",c:5,u:"g"}]},
-"Sopa de avena":{t:"SO",i:[{i:"Mix sopa",c:1,u:"bolsa"},{i:"Avena",c:5,u:"g"}]},
+"Sopa crema de verduras":{t:"SO",i:[{i:"Queso crema",c:2,u:"g"}]},
+"Sopa crema de espárragos":{t:"SO",i:[{i:"Espárragos congelados",c:56,u:"g"},{i:"Cebolla entera",c:8,u:"g"},{i:"Queso Tybo",c:10,u:"g"}]},
+"Sopa de calabaza":{t:"SO",i:[{i:"Calabaza entera",c:20,u:"g"}]},
+"Sopa de Arroz":{t:"SO",i:[{i:"Arroz parborizado",c:10,u:"g"}]},
+"Sopa Munición":{t:"SO",i:[{i:"Fideos munición crudos",c:5,u:"g"}]},
+"Sopa de sémola":{t:"SO",i:[{i:"Sémola",c:5,u:"g"}]},
+"Sopa de avena":{t:"SO",i:[{i:"Avena",c:5,u:"g"}]},
 "Puré Gratinado":{t:"GU",i:[{i:"Papa entera",c:65,u:"g"},{i:"Queso Tybo",c:20,u:"g"}]},
 "Puré de papa liviano":{t:"GU",i:[{i:"Papa entera",c:150,u:"g"}]},
 "Puré de papa enriquecido":{t:"GU",i:[{i:"Papa entera",c:150,u:"g"},{i:"Crema de leche",c:15,u:"g"}]},
@@ -718,63 +718,27 @@ if (recetasGuardadas) {
 }
 
 const DIETAS={g:'General',l:'Liviano',lc:'Liv. c/carne',n:'Niño',a:'Adolescente',b1:'Bebé 1',b2:'Bebé 2',dbt:'DBT',bcb:'BCB',veg:'Vegetariano',cel:'Celíaco',ast:'Astringente',sl:'Súper liviano',ids4:'IDSSI 4',ids5:'IDSSI 5',ids6:'IDSSI 6',ids7:'IDSSI 7',exc:'Excepción'};
+
+// Mix base de sopa: ingredientes fijos de una bolsa de 10kg, rinde ~30 porciones.
+// Cualquier receta de tipo "SO" (sopa) suma este mix además de sus ingredientes extra propios.
+const SOPA_MIX_BASE=[
+  {i:"Zanahoria",c:2.5,u:"kg"},
+  {i:"Zapallito",c:2.5,u:"kg"},
+  {i:"Calabaza",c:2.5,u:"kg"},
+  {i:"Verdeo",c:0.1,u:"kg"},
+  {i:"Cebolla",c:0.1,u:"kg"},
+  {i:"Acelga",c:1,u:"kg"},
+  {i:"Nabo",c:0.8,u:"kg"},
+  {i:"Apio",c:0.5,u:"kg"},
+];
+const SOPA_PORCIONES_POR_BOLSA=30;
+
 const TPILL={PP:'pill pill-pp',GU:'pill pill-gu',EN:'pill pill-en',SO:'pill pill-so',PO:'pill pill-po'};
 const TPILL_MI={PP:'mi-pp',GU:'mi-gu',EN:'mi-en',SO:'mi-so',PO:'mi-po'};
 
 let items=[],mermas={},proveedores=[],plantillas=[],comboRecetas=[],recSelC='';
-let recetasExtra={}; // recetas cargadas a mano vía CSV, persisten aparte del recetario base
-
-// ─── PERSISTENCIA (localStorage) ───
-// Guarda todo el estado del usuario para que no se pierda al recargar o actualizar la app.
-const STORAGE_KEY='pedido_despensa_estado_v1';
-
-function guardarEstado(){
-  try{
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({items,mermas,proveedores,plantillas}));
-  }catch(e){
-    console.error('No se pudo guardar el estado:', e);
-  }
-}
-
-// Las recetas agregadas a mano (CSV) se guardan aparte, para no pisar el
-// recetario base cada vez que se actualiza la app (index.html nuevo).
-const RECETAS_EXTRA_KEY='pedido_despensa_recetas_extra_v1';
-
-function guardarRecetasExtra(){
-  try{
-    localStorage.setItem(RECETAS_EXTRA_KEY, JSON.stringify(recetasExtra));
-  }catch(e){
-    console.error('No se pudieron guardar las recetas extra:', e);
-  }
-}
-
-function cargarRecetasExtra(){
-  try{
-    const raw=localStorage.getItem(RECETAS_EXTRA_KEY);
-    if(!raw) return;
-    const data=JSON.parse(raw);
-    Object.assign(recetasExtra, data);
-    Object.assign(REC, data); // las sumamos al recetario activo
-  }catch(e){
-    console.error('No se pudieron cargar las recetas extra:', e);
-  }
-}
-
-function cargarEstado(){
-  try{
-    const raw=localStorage.getItem(STORAGE_KEY);
-    if(!raw) return;
-    const data=JSON.parse(raw);
-    if(data.items) items=data.items;
-    if(data.mermas) mermas=data.mermas;
-    if(data.proveedores) proveedores=data.proveedores;
-    if(data.plantillas) plantillas=data.plantillas;
-  }catch(e){
-    console.error('No se pudo cargar el estado guardado:', e);
-  }
-}
 let filtroU='todo',vista='consolidado';
-function getNombres(){ return Object.keys(REC).sort((a,b)=>a.localeCompare(b,'es')); }
+const nombres=Object.keys(REC).sort((a,b)=>a.localeCompare(b,'es'));
 
 // ─── MACRO ───
 function previewMacro(){
@@ -801,7 +765,6 @@ function cargarDesdeMacro(){
   const ings=[];
   conRec.forEach(r=>REC[r].i.forEach(ing=>ings.push({...ing})));
   items.push({dia,srv,diet,nombre:conRec.join(' + '),recetas:conRec,ingredientes:ings,porciones:por,id:Date.now(),esCombo:true,desdeMacro:true});
-  guardarEstado();
   renderLista();
   let msg=`✓ ${conRec.length} platos cargados — ${DIETAS[diet]}, ${dia} ${srv}`;
   if(sinRec.length) msg+=`. Sin receta: ${sinRec.join(', ')}`;
@@ -822,7 +785,6 @@ function mostrarNotif(msg,tipo){
 // ─── COMBO MANUAL ───
 function filtrarC(){
   const q=document.getElementById('cRec').value.toLowerCase();
-  const nombres=getNombres();
   const res=q?nombres.filter(n=>n.toLowerCase().includes(q)):nombres;
   const drop=document.getElementById('cdrop');
   drop.innerHTML=res.slice(0,25).map(n=>`<div class="dopt" onmousedown="selRecC('${n.replace(/'/g,"\\'")}')"><b>${n}</b><small>${REC[n].t}</small></div>`).join('');
@@ -853,7 +815,7 @@ function confirmarCombo(){
   const ings=[];
   comboRecetas.forEach(r=>REC[r].i.forEach(ing=>ings.push({...ing})));
   items.push({dia,srv,diet,nombre:comboRecetas.join(' + '),recetas:[...comboRecetas],ingredientes:ings,porciones:por,id:Date.now(),esCombo:true});
-  comboRecetas=[];guardarEstado();renderComboActual();renderLista();
+  comboRecetas=[];renderComboActual();renderLista();
   mostrarNotif('✓ Combo agregado al menú');
 }
 
@@ -863,7 +825,6 @@ function guardarPlantilla(){
   const nombre=prompt('Nombre para esta plantilla:');
   if(!nombre)return;
   plantillas.push({nombre,recetas:[...comboRecetas],id:Date.now()});
-  guardarEstado();
   renderPlantillas();
   mostrarNotif(`✓ Plantilla "${nombre}" guardada`);
 }
@@ -876,13 +837,12 @@ function cargarPlantilla(id){
   const ings=[];
   p.recetas.filter(r=>REC[r]).forEach(r=>REC[r].i.forEach(ing=>ings.push({...ing})));
   items.push({dia,srv,diet,nombre:p.recetas.join(' + '),recetas:[...p.recetas],ingredientes:ings,porciones:por,id:Date.now(),esCombo:true});
-  guardarEstado();
   renderLista();
   mostrarNotif(`✓ Plantilla "${p.nombre}" → ${DIETAS[diet]}, ${dia} ${srv}, ${por} porciones`);
   goTab('menu');
 }
-function borrarPlantilla(id){plantillas=plantillas.filter(x=>x.id!==id);guardarEstado();renderPlantillas();}
-function limpiarTodasPlantillas(){if(confirm('¿Borrar todas las plantillas?')){plantillas=[];guardarEstado();renderPlantillas();}}
+function borrarPlantilla(id){plantillas=plantillas.filter(x=>x.id!==id);renderPlantillas();}
+function limpiarTodasPlantillas(){if(confirm('¿Borrar todas las plantillas?')){plantillas=[];renderPlantillas();}}
 function renderPlantillas(){
   const el=document.getElementById('plantillas-lista');
   if(!plantillas.length){el.innerHTML='<div class="empty">Sin plantillas — armá un combo y guardalo desde el Menú</div>';return;}
@@ -890,8 +850,8 @@ function renderPlantillas(){
 }
 
 // ─── LISTA MENÚ ───
-function borrar(id){items=items.filter(i=>i.id!==id);guardarEstado();renderLista();}
-function upd(id,val){const it=items.find(i=>i.id===id);if(it)it.porciones=val;guardarEstado();}
+function borrar(id){items=items.filter(i=>i.id!==id);renderLista();}
+function upd(id,val){const it=items.find(i=>i.id===id);if(it)it.porciones=val;}
 function renderLista(){
   const el=document.getElementById('lista');
   if(!items.length){el.innerHTML='<div class="empty">Cargá platos desde el macro o armá un combo manual</div>';return;}
@@ -922,16 +882,15 @@ function addMerma(){
   if(!ing)return;
   mermas[ing.toLowerCase()]=pct;
   document.getElementById('mIng').value='';document.getElementById('mPct').value='';
-  guardarEstado();
   renderMermas();
 }
-function addMR(ing,pct){mermas[ing.toLowerCase()]=pct;guardarEstado();renderMermas();}
-function borrarMerma(k){delete mermas[k];guardarEstado();renderMermas();}
+function addMR(ing,pct){mermas[ing.toLowerCase()]=pct;renderMermas();}
+function borrarMerma(k){delete mermas[k];renderMermas();}
 function renderMermas(){
   const el=document.getElementById('mermaList');
   const keys=Object.keys(mermas);
   if(!keys.length){el.innerHTML='<div class="empty">Sin mermas</div>';return;}
-  el.innerHTML=`<div class="ilist">${keys.map(k=>`<div class="irow" style="grid-template-columns:1fr auto auto"><span>${k.charAt(0).toUpperCase()+k.slice(1)}</span><input class="porinp" type="number" min="0" max="99" value="${mermas[k]}" onchange="mermas['${k}']=parseFloat(this.value)||0;guardarEstado()"><button class="del" onclick="borrarMerma('${k}')">×</button></div>`).join('')}</div>`;
+  el.innerHTML=`<div class="ilist">${keys.map(k=>`<div class="irow" style="grid-template-columns:1fr auto auto"><span>${k.charAt(0).toUpperCase()+k.slice(1)}</span><input class="porinp" type="number" min="0" max="99" value="${mermas[k]}" onchange="mermas['${k}']=parseFloat(this.value)||0"><button class="del" onclick="borrarMerma('${k}')">×</button></div>`).join('')}</div>`;
 }
 
 // ─── PROVEEDORES ───
@@ -943,10 +902,9 @@ function addProv(){
   if(!n||!g)return;
   proveedores.push({nombre:n,palabras:g.toLowerCase().split(',').map(x=>x.trim()),dias:d,perecedero:p==='si',id:Date.now()});
   document.getElementById('pNombre').value='';document.getElementById('pGrupo').value='';document.getElementById('pDias').value='';
-  guardarEstado();
   renderProveedores();renderCronograma();
 }
-function borrarProv(id){proveedores=proveedores.filter(p=>p.id!==id);guardarEstado();renderProveedores();renderCronograma();}
+function borrarProv(id){proveedores=proveedores.filter(p=>p.id!==id);renderProveedores();renderCronograma();}
 function getProv(n){const nl=n.toLowerCase();return proveedores.find(p=>p.palabras.some(pal=>nl.includes(pal)))||null;}
 function renderProveedores(){
   const el=document.getElementById('provList');
@@ -964,12 +922,10 @@ function renderCronograma(){
 // ─── CÁLCULO ───
 function getMerma(n){const nl=n.toLowerCase();for(const[k,v] of Object.entries(mermas)){if(nl.includes(k))return v/100;}return 0;}
 
-// Clasifica por la UNIDAD real de la receta (no por el nombre del ingrediente).
-// 'bolsa' (mix de sopa) tiene su propia categoría 's' para no mezclarse con gramos/ml/unidades.
+// CORRECCIÓN CLAVE: Agregamos el segundo parámetro para detectar si es sopa por el nombre del ingrediente
 function getUCat(u){
   u=(u||'').toLowerCase().replace('.','').trim();
-  if(['bolsa','bolsas'].includes(u))return 's';
-  if(['g','gr','gramo','gramos','gs','kg'].includes(u))return 'g';
+  if(['g','gr','gramo','gramos','gs','kg','kgs'].includes(u))return 'g';
   if(['ml','cc','l','lt','lts'].includes(u))return 'ml';
   if(['unidad','unidades','un','sobre','sobres'].includes(u))return 'u';
   return 'o';
@@ -977,28 +933,50 @@ function getUCat(u){
 
 function calcTotales(){
   const tot={};
+  let porcionesTotalSopa=0;
+
   items.forEach(it=>{
-    (it.ingredientes||[]).forEach(ing=>{
+    // Si el combo incluye alguna receta de tipo sopa, acumulamos sus porciones
+    // para calcular cuántas bolsas de mix base hacen falta.
+    const tieneSopa=(it.recetas||[]).some(r=>REC[r]&&REC[r].t==='SO');
+    if(tieneSopa) porcionesTotalSopa += it.porciones;
+
+    (it.ingredientes||[]).forEach((ing,idx)=>{
       const cat=getUCat(ing.u);
       const key=ing.i.toLowerCase().trim()+'|||'+cat;
-      if(!tot[key]) tot[key]={nombre:ing.i,cat,u:ing.u,cant:0};
+      if(!tot[key]) tot[key]={nombre:ing.i,cat,u:ing.u,cant:0,esSopa:false};
       tot[key].cant += ing.c * it.porciones;
+      if(tieneSopa) tot[key].esSopa=true;
     });
   });
 
+  // Sumamos el mix base de sopa, proporcional a las bolsas necesarias.
+  if(porcionesTotalSopa>0){
+    const bolsas=porcionesTotalSopa/SOPA_PORCIONES_POR_BOLSA;
+    SOPA_MIX_BASE.forEach(ing=>{
+      const cat=getUCat(ing.u);
+      const key=ing.i.toLowerCase().trim()+'|||'+cat;
+      if(!tot[key]) tot[key]={nombre:ing.i,cat,u:ing.u,cant:0,esSopa:false};
+      tot[key].cant += ing.c*bolsas;
+      tot[key].esSopa=true;
+    });
+  }
+
   return Object.values(tot).map(r=>{
     const m=getMerma(r.nombre);
-    let cantFinal = r.cant * (1+m);
-    let uniFinal = r.u;
-
-    if(r.cat === 's'){
-      // Cada unidad de receta ya es 1 bolsa; redondeamos hacia arriba.
-      cantFinal = Math.ceil(cantFinal);
-      uniFinal = cantFinal === 1 ? 'bolsa' : 'bolsas';
-    }
-
-    return {...r, merma:m, cantConMerma: cantFinal, u: uniFinal};
+    return {...r, merma:m, cantConMerma: r.cant*(1+m)};
   }).sort((a,b)=>a.nombre.localeCompare(b.nombre,'es'));
+}
+
+// Cuántas bolsas de mix base de sopa hacen falta pedir (info auxiliar para mostrar en el pedido)
+function calcBolsasSopa(){
+  let porcionesTotalSopa=0;
+  items.forEach(it=>{
+    const tieneSopa=(it.recetas||[]).some(r=>REC[r]&&REC[r].t==='SO');
+    if(tieneSopa) porcionesTotalSopa += it.porciones;
+  });
+  if(porcionesTotalSopa<=0) return 0;
+  return Math.ceil(porcionesTotalSopa/SOPA_PORCIONES_POR_BOLSA);
 }
 
 function fmtNum(n){
@@ -1016,9 +994,11 @@ function renderPedido(){
   const tp=items.reduce((s,i)=>s+i.porciones,0);
   document.getElementById('sumCards').innerHTML=`<div class="scard"><strong>${items.length}</strong><span>Combos/platos</span></div><div class="scard"><strong>${tp}</strong><span>Porciones</span></div><div class="scard"><strong>${tots.length}</strong><span>Ingredientes</span></div>`;
   
-  const vis=filtroU==='todo'?tots:tots.filter(r=>r.cat===filtroU);
+  const vis=filtroU==='todo'?tots:(filtroU==='s'?tots.filter(r=>r.esSopa):tots.filter(r=>r.cat===filtroU));
   if(!vis.length){document.getElementById('resultado').innerHTML='<div class="empty">Sin ingredientes para mostrar</div>';return;}
-  const bc=c=>c==='g'?'b-g':c==='ml'?'b-ml':c==='u'?'b-u':c==='s'?'b-u':'b-o';
+  const bc=c=>c==='g'?'b-g':c==='ml'?'b-ml':c==='u'?'b-u':'b-o';
+
+  const bolsas=calcBolsasSopa();
 
   const generarTablaHTML = (lista, esVistaConsolidado, mostrarProveedor = false) => {
     return `<div class="card" style="padding:0;overflow:hidden;margin-bottom:20px;">
@@ -1051,12 +1031,12 @@ function renderPedido(){
   };
 
   if(vista==='consolidado'){
-    const listaSopas = vis.filter(r => r.cat === 's');
-    const listaOtros = vis.filter(r => r.cat !== 's');
+    const listaSopas = vis.filter(r => r.esSopa);
+    const listaOtros = vis.filter(r => !r.esSopa);
 
     let htmlFinal = '';
     if(listaSopas.length > 0) {
-      htmlFinal += `<div class="dia-title" style="color:var(--azul-txt);border-bottom:2px solid var(--azul);margin-top:15px;margin-bottom:10px;font-size:14px;font-weight:bold">🍲 INGREDIENTES PARA SOPAS</div>`;
+      htmlFinal += `<div class="dia-title" style="color:var(--azul-txt);border-bottom:2px solid var(--azul);margin-top:15px;margin-bottom:10px;font-size:14px;font-weight:bold">🍲 INGREDIENTES PARA SOPAS ${bolsas>0?`<span style="font-size:12px;font-weight:500;color:var(--gris)">— ${bolsas} ${bolsas===1?'bolsa':'bolsas'} de mix base (10kg c/u)</span>`:''}</div>`;
       htmlFinal += generarTablaHTML(listaSopas, true, false);
     }
     if(listaOtros.length > 0) {
@@ -1069,42 +1049,51 @@ function renderPedido(){
     const porDia={};
     items.forEach(it=>{const k=`${it.dia} · ${it.srv}`;if(!porDia[k])porDia[k]=[];porDia[k].push(it);});
     let html='';
-    
+
     for(const[dia,dItems] of Object.entries(porDia)){
       const totDia={};
-      dItems.forEach(it=>{(it.ingredientes||[]).forEach(ing=>{
-        const cat=getUCat(ing.u);
-        const key=ing.i.toLowerCase().trim()+'|||'+cat;
-        if(!totDia[key])totDia[key]={nombre:ing.i,cat,u:ing.u,cant:0};
-        
-        if(cat === 's'){
-          if(ing.c > 10) totDia[key].cant += (ing.c / 10000) * it.porciones;
-          else totDia[key].cant += ing.c * it.porciones;
-        } else {
+      let porcionesSopaDia=0;
+
+      dItems.forEach(it=>{
+        const tieneSopa=(it.recetas||[]).some(r=>REC[r]&&REC[r].t==='SO');
+        if(tieneSopa) porcionesSopaDia += it.porciones;
+
+        (it.ingredientes||[]).forEach(ing=>{
+          const cat=getUCat(ing.u);
+          const key=ing.i.toLowerCase().trim()+'|||'+cat;
+          if(!totDia[key]) totDia[key]={nombre:ing.i,cat,u:ing.u,cant:0,esSopa:false};
           totDia[key].cant += ing.c * it.porciones;
-        }
-      });});
-      
+          if(tieneSopa) totDia[key].esSopa=true;
+        });
+      });
+
+      let bolsasDia=0;
+      if(porcionesSopaDia>0){
+        bolsasDia=Math.ceil(porcionesSopaDia/SOPA_PORCIONES_POR_BOLSA);
+        const factor=porcionesSopaDia/SOPA_PORCIONES_POR_BOLSA;
+        SOPA_MIX_BASE.forEach(ing=>{
+          const cat=getUCat(ing.u);
+          const key=ing.i.toLowerCase().trim()+'|||'+cat;
+          if(!totDia[key]) totDia[key]={nombre:ing.i,cat,u:ing.u,cant:0,esSopa:false};
+          totDia[key].cant += ing.c*factor;
+          totDia[key].esSopa=true;
+        });
+      }
+
       const rowsDia=Object.values(totDia).map(r=>{
         const m=getMerma(r.nombre);
-        let cFinal = r.cant*(1+m);
-        let uFinal = r.u;
-        if(r.cat === 's'){
-          cFinal = Math.ceil(cFinal);
-          uFinal = cFinal === 1 ? 'bolsa (10kg)' : 'bolsas (10kg)';
-        }
-        return{...r,merma:m,cantConMerma:cFinal,u:uFinal};
+        return {...r, merma:m, cantConMerma: r.cant*(1+m)};
       }).sort((a,b)=>a.nombre.localeCompare(b.nombre,'es'));
-      
-      const visDia=filtroU==='todo'?rowsDia:rowsDia.filter(r=>r.cat===filtroU);
-      
+
+      const visDia=filtroU==='todo'?rowsDia:(filtroU==='s'?rowsDia.filter(r=>r.esSopa):rowsDia.filter(r=>r.cat===filtroU));
+
       if(visDia.length > 0) {
-        const sopasDia = visDia.filter(r => r.cat === 's');
-        const otrosDia = visDia.filter(r => r.cat !== 's');
+        const sopasDia = visDia.filter(r => r.esSopa);
+        const otrosDia = visDia.filter(r => !r.esSopa);
 
         html += `<div class="dia-sec" style="margin-top:20px;"><div class="dia-title" style="font-size:14px;font-weight:bold;color:var(--texto);border-bottom:3px solid var(--gris);">📅 ${dia}</div>`;
         if(sopasDia.length > 0) {
-          html += `<div style="font-size:12px;font-weight:bold;color:var(--azul-txt);margin:10px 0 5px 0;">[SOPAS]</div>`;
+          html += `<div style="font-size:12px;font-weight:bold;color:var(--azul-txt);margin:10px 0 5px 0;">[SOPAS]${bolsasDia>0?` — ${bolsasDia} ${bolsasDia===1?'bolsa':'bolsas'} de mix base`:''}</div>`;
           html += generarTablaHTML(sopasDia, false, true);
         }
         if(otrosDia.length > 0) {
@@ -1149,23 +1138,6 @@ function goTab(t){
   if(t==='plantillas')renderPlantillas();
 }
 
-// Migración: si existían recetas guardadas bajo la clave vieja (versión anterior
-// con un bug), las traemos a la clave nueva una sola vez.
-(function migrarRecetasViejas(){
-  try{
-    const viejo=localStorage.getItem('SA_RECETAS_EXT');
-    if(viejo){
-      const dataVieja=JSON.parse(viejo);
-      const actual=JSON.parse(localStorage.getItem(RECETAS_EXTRA_KEY)||'{}');
-      Object.assign(actual, dataVieja);
-      localStorage.setItem(RECETAS_EXTRA_KEY, JSON.stringify(actual));
-      localStorage.removeItem('SA_RECETAS_EXT');
-    }
-  }catch(e){console.error('Migración de recetas viejas falló:',e);}
-})();
-
-cargarRecetasExtra();
-cargarEstado();
 previewMacro();
 renderLista();
 
@@ -1233,12 +1205,15 @@ function analizarYGuardarRecetas(texto, fileName) {
 
   if (nombreReceta && ingredientes.length > 0) {
     let esNueva = !REC[nombreReceta];
-
-    // Guardar en el recetario activo (en memoria) y en recetasExtra (persistente)
+    
+    // Guardar en la base de datos temporal en ejecución
     REC[nombreReceta] = { t: "PP", i: ingredientes };
-    recetasExtra[nombreReceta] = { t: "PP", i: ingredientes };
-    guardarRecetasExtra();
-
+    
+    // Guardar permanentemente en el navegador (Local Storage)
+    let recetasExt = JSON.parse(localStorage.getItem('SA_RECETAS_EXT')) || {};
+    recetasExt[nombreReceta] = { t: "PP", i: ingredientes };
+    localStorage.setItem('SA_RECETAS_EXT', JSON.stringify(recetasExt));
+    
     // Notificación en pantalla
     const log = document.getElementById('logCarga');
     log.style.display = 'block';
@@ -1246,7 +1221,7 @@ function analizarYGuardarRecetas(texto, fileName) {
                     • Receta: <code>${nombreReceta}</code><br>
                     • Ingredientes registrados: ${ingredientes.length}<br>
                     • Estado: ${esNueva ? '✨ Agregada como nueva' : '🔄 Actualizada (Ya existía)'}`;
-
+    
     input.value = ""; // Limpiar input
   } else {
     alert("No se pudo interpretar el archivo. Asegúrate de subir el archivo guardado como formato CSV.");
