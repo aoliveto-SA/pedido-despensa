@@ -321,6 +321,35 @@ tr:hover td{background:var(--fondo)}
     </div>
     <div id="logCarga" style="margin-top:12px; font-size:12px; max-height:240px; overflow-y:auto; padding:8px; display:none; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:6px; color:#166534;"></div>
   </div>
+
+  <!-- ── GESTIÓN DE RECETAS ── -->
+  <div class="card" style="margin-top:0">
+    <div class="card-title">
+      📋 Gestión de recetas
+      <span id="rec-contador" style="font-size:11px;font-weight:400;color:var(--gris)"></span>
+    </div>
+    <div class="form-row" style="margin-bottom:10px;gap:8px">
+      <div class="form-col grow">
+        <input type="text" id="rec-buscar" placeholder="Buscar receta por nombre..." oninput="renderGestorRecetas()" style="width:100%">
+      </div>
+      <div class="form-col">
+        <select id="rec-filtro-tipo" onchange="renderGestorRecetas()" style="width:90px">
+          <option value="">Todos</option>
+          <option value="PP">PP — Plato</option>
+          <option value="GU">GU — Guarnición</option>
+          <option value="EN">EN — Entrada</option>
+          <option value="SO">SO — Sopa</option>
+          <option value="PO">PO — Postre</option>
+        </select>
+      </div>
+      <button class="btn btn-s" style="font-size:12px;white-space:nowrap" onclick="seleccionarTodasRec()">☑ Selec. todas</button>
+      <button class="btn btn-s" style="font-size:12px;color:var(--rojo);border-color:#fca5a5;white-space:nowrap" onclick="eliminarSeleccionadas()">🗑 Eliminar selec.</button>
+    </div>
+    <div id="rec-lista" style="max-height:380px;overflow-y:auto;border:1px solid var(--borde);border-radius:var(--radio)">
+      <div class="empty">Cargando recetas...</div>
+    </div>
+  </div>
+
   <div class="card" style="margin-top:0">
     <div class="card-title">🗑 Limpiar datos guardados</div>
     <p style="font-size:12px;color:var(--gris);margin-bottom:10px">Borrá el menú, mermas, proveedores o plantillas guardados en el navegador sin tocar las recetas.</p>
@@ -1169,6 +1198,7 @@ function goTab(t){
   if(t==='proveedores'){renderProveedores();renderCronograma();}
   if(t==='mermas')renderMermas();
   if(t==='plantillas')renderPlantillas();
+  if(t==='cargar-recetas')renderGestorRecetas();
 }
 
 previewMacro();
@@ -1195,6 +1225,7 @@ function procesarArchivoRecetas(input) {
       const resultado = analizarXlsx(e.target.result, file.name);
       log.innerHTML = formatearLog([resultado]);
       persistirRecetasExt();
+      renderGestorRecetas();
     };
     reader.readAsArrayBuffer(file);
   } else {
@@ -1207,6 +1238,7 @@ function procesarArchivoRecetas(input) {
       const resultado = analizarCsvTexto(texto, file.name);
       log.innerHTML = formatearLog([resultado]);
       persistirRecetasExt();
+      renderGestorRecetas();
     };
     reader.readAsArrayBuffer(file);
   }
@@ -1275,6 +1307,7 @@ async function procesarZIP(file) {
     }
 
     persistirRecetasExt();
+    renderGestorRecetas();
 
     const htmlDebug = `<details style="margin-top:8px;font-size:11px;color:var(--gris)">
       <summary style="cursor:pointer">Ver todos los archivos del ZIP (${todosLosArchivos.length})</summary>
@@ -1307,10 +1340,13 @@ function analizarCsvTexto(texto, fileName) {
 // Procesar un archivo XLSX con SheetJS
 function analizarXlsx(buf, fileName) {
   try {
-    const wb = XLSX.read(buf, { type: 'array' });
-    // Usar la primera hoja
+    if (typeof XLSX === 'undefined') {
+      return { ok: false, nombre: fileName, error: 'SheetJS no cargó aún — intentá de nuevo en unos segundos' };
+    }
+    // SheetJS necesita Uint8Array, no ArrayBuffer crudo
+    const data = new Uint8Array(buf);
+    const wb = XLSX.read(data, { type: 'array' });
     const ws = wb.Sheets[wb.SheetNames[0]];
-    // Convertir a CSV para reutilizar el mismo parser
     const csv = XLSX.utils.sheet_to_csv(ws);
     return analizarYGuardarReceta(csv, fileName);
   } catch(e) {
@@ -1389,12 +1425,115 @@ function formatearLog(resultados) {
   }
   if (err.length) {
     html += `<strong style="color:var(--rojo)">⚠ ${err.length} archivo${err.length>1?'s':''} sin procesar:</strong><ul style="margin:6px 0 6px 16px;color:var(--rojo)">`;
-    err.forEach(r => { html += `<li>${r.nombre}</li>`; });
+    err.forEach(r => { html += `<li>${r.nombre}${r.error ? ` <small style="opacity:.7">(${r.error})</small>` : ''}</li>`; });
     html += '</ul>';
   }
   return html || '<em>Sin resultados</em>';
 }
 
 
-</script>
-</body></html>
+// ─── GESTIÓN DE RECETAS ───
+// Set de nombres seleccionados para eliminar
+let recSeleccionadas = new Set();
+
+// Conjunto de recetas base (hardcoded) — no se pueden eliminar
+const REC_BASE_NOMBRES = new Set(Object.keys(REC));
+
+function renderGestorRecetas() {
+  const q = (document.getElementById('rec-buscar')?.value || '').toLowerCase().trim();
+  const tipoF = document.getElementById('rec-filtro-tipo')?.value || '';
+  const todos = Object.entries(REC);
+  const filtrados = todos.filter(([nombre, rec]) => {
+    const pasaNombre = !q || nombre.toLowerCase().includes(q);
+    const pasaTipo = !tipoF || rec.t === tipoF;
+    return pasaNombre && pasaTipo;
+  }).sort(([a],[b]) => a.localeCompare(b, 'es'));
+
+  const el = document.getElementById('rec-lista');
+  const contador = document.getElementById('rec-contador');
+  if (contador) contador.textContent = `${filtrados.length} de ${todos.length} recetas`;
+
+  if (!filtrados.length) {
+    el.innerHTML = '<div class="empty">Sin recetas que coincidan</div>';
+    return;
+  }
+
+  const TIPOS = {PP:'pill-pp',GU:'pill-gu',EN:'pill-en',SO:'pill-so',PO:'pill-po'};
+  const TIPO_LABEL = {PP:'Plato',GU:'Guarnición',EN:'Entrada',SO:'Sopa',PO:'Postre'};
+
+  el.innerHTML = filtrados.map(([nombre, rec]) => {
+    const esBase = REC_BASE_NOMBRES.has(nombre);
+    const sel = recSeleccionadas.has(nombre);
+    const pillClass = TIPOS[rec.t] || 'pill-ot';
+    return `<div class="irow" style="grid-template-columns:28px 1fr auto auto auto;gap:8px;align-items:center;${sel?'background:#fef2f2;':''}" id="recrow-${CSS.escape(nombre)}">
+      <input type="checkbox" ${sel?'checked':''} ${esBase?'disabled title="Receta base — no se puede eliminar"':''}
+        onchange="toggleRecSel('${nombre.replace(/'/g,"\\'")}')"
+        style="width:16px;height:16px;accent-color:var(--rojo);cursor:${esBase?'not-allowed':'pointer'}">
+      <div>
+        <span style="font-size:13px;font-weight:500">${nombre}</span>
+        ${esBase?'<span style="font-size:10px;color:var(--gris);margin-left:6px">base</span>':''}
+      </div>
+      <span class="pill ${pillClass}" style="font-size:10px">${TIPO_LABEL[rec.t]||rec.t}</span>
+      <span style="font-size:11px;color:var(--gris);white-space:nowrap">${rec.i.length} ing.</span>
+      <button class="del" title="Eliminar esta receta"
+        ${esBase?'disabled style="color:#ddd;cursor:not-allowed"':'style="color:#fca5a5" onmouseenter="this.style.color=\'var(--rojo)\'" onmouseleave="this.style.color=\'#fca5a5\'"'}
+        onclick="${esBase?'alert(\'Las recetas base no se pueden eliminar desde aquí.\')':'eliminarReceta(\''+nombre.replace(/'/g,"\\'")+'\')'}">×</button>
+    </div>`;
+  }).join('');
+}
+
+function toggleRecSel(nombre) {
+  if (recSeleccionadas.has(nombre)) {
+    recSeleccionadas.delete(nombre);
+  } else {
+    recSeleccionadas.add(nombre);
+  }
+  renderGestorRecetas();
+}
+
+function seleccionarTodasRec() {
+  const q = (document.getElementById('rec-buscar')?.value || '').toLowerCase().trim();
+  const tipoF = document.getElementById('rec-filtro-tipo')?.value || '';
+  const hayAlgunaSeleccionada = [...recSeleccionadas].some(n =>
+    (!q || n.toLowerCase().includes(q)) && (!tipoF || REC[n]?.t === tipoF)
+  );
+  // Si ya hay algunas seleccionadas en la vista actual → deseleccionar; si no → seleccionar todas (no-base)
+  Object.keys(REC).forEach(nombre => {
+    const pasaNombre = !q || nombre.toLowerCase().includes(q);
+    const pasaTipo = !tipoF || REC[nombre]?.t === tipoF;
+    if (!pasaNombre || !pasaTipo) return;
+    if (REC_BASE_NOMBRES.has(nombre)) return; // no tocar base
+    if (hayAlgunaSeleccionada) {
+      recSeleccionadas.delete(nombre);
+    } else {
+      recSeleccionadas.add(nombre);
+    }
+  });
+  renderGestorRecetas();
+}
+
+function eliminarReceta(nombre) {
+  if (REC_BASE_NOMBRES.has(nombre)) {
+    alert('Las recetas base no se pueden eliminar desde aquí.');
+    return;
+  }
+  if (!confirm(`¿Eliminar la receta "${nombre}"?\nEsta acción no se puede deshacer.`)) return;
+  delete REC[nombre];
+  recSeleccionadas.delete(nombre);
+  persistirRecetasExt();
+  renderGestorRecetas();
+  mostrarNotif(`🗑 Receta "${nombre}" eliminada`);
+}
+
+function eliminarSeleccionadas() {
+  const aEliminar = [...recSeleccionadas].filter(n => !REC_BASE_NOMBRES.has(n));
+  if (!aEliminar.length) {
+    alert('No hay recetas importadas seleccionadas para eliminar.\n(Las recetas base no se pueden eliminar.)');
+    return;
+  }
+  if (!confirm(`¿Eliminar ${aEliminar.length} receta${aEliminar.length>1?'s':''}?\n\n${aEliminar.slice(0,10).join('\n')}${aEliminar.length>10?'\n...y '+(aEliminar.length-10)+' más':''}\n\nEsta acción no se puede deshacer.`)) return;
+  aEliminar.forEach(n => { delete REC[n]; recSeleccionadas.delete(n); });
+  persistirRecetasExt();
+  renderGestorRecetas();
+  mostrarNotif(`🗑 ${aEliminar.length} receta${aEliminar.length>1?'s':''} eliminada${aEliminar.length>1?'s':''}`);
+}
