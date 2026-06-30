@@ -1412,7 +1412,7 @@ function analizarYGuardarReceta(texto, fileName) {
   let ingredientes = [];
 
   if (lineas.length > 0) {
-    // Limpiar BOM, comillas y espacios del título
+    // Limpiar BOM, comillas y espacios del título 
     let primeraCol = parsearLineaCSV(lineas[0])[0] || '';
     primeraCol = primeraCol.replace(/^["'\s]+|["'\s]+$/g, '').trim();
     if (primeraCol) {
