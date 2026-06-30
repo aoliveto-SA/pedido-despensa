@@ -3,6 +3,8 @@
 <title>Pedido a Despensa — Sanatorio Allende Cerro</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <style>
 :root{
   --verde:#16a34a;--verde-claro:#dcfce7;--verde-txt:#166534;
@@ -785,26 +787,82 @@ const SOPA_PORCIONES_POR_BOLSA=30;
 const TPILL={PP:'pill pill-pp',GU:'pill pill-gu',EN:'pill pill-en',SO:'pill pill-so',PO:'pill pill-po'};
 const TPILL_MI={PP:'mi-pp',GU:'mi-gu',EN:'mi-en',SO:'mi-so',PO:'mi-po'};
 
-// ─── PERSISTENCIA ───
-function cargarEstado() {
-  try {
-    const s = JSON.parse(localStorage.getItem('SA_ESTADO') || '{}');
-    return {
-      items: s.items || [],
-      mermas: s.mermas || {},
-      proveedores: s.proveedores || [],
-      plantillas: s.plantillas || [],
-    };
-  } catch(e) { return { items:[], mermas:{}, proveedores:[], plantillas:[] }; }
-}
+// ─── MERMAS POR DEFECTO ───
+// Se usan la primera vez que se abre la app en un navegador (sin nada guardado todavía).
+// Una vez que el usuario las edita desde la pestaña Mermas, lo guardado en localStorage
+// tiene prioridad sobre estos valores.
+const MERMAS_DEFAULT = {
+  "lomo": 30,
+  "bife de chorizo": 25,
+  "pechuga": 20,
+  "muslo de pollo": 20,
+  "pata muslo": 20,
+  "nalga": 22,
+  "peceto": 25,
+  "matambre": 20,
+  "trucha": 15,
+  "papa entera": 20,
+  "calabaza entera": 30,
+  "zanahoria entera": 15,
+  "espinaca congelada": 10,
+  "espárragos congelados": 15,
+  "remolacha entera": 15
+};
+
+// ─── PERSISTENCIA COMPARTIDA (Firebase Firestore) ───
+const firebaseConfig = {
+  apiKey: "AIzaSyCf86ApxbHWM4NlgZ3lulr3arn4cU65QcI",
+  authDomain: "pedido-despensa.firebaseapp.com",
+  projectId: "pedido-despensa",
+  storageBucket: "pedido-despensa.firebasestorage.app",
+  messagingSenderId: "755548821273",
+  appId: "1:755548821273:web:071b76e5aa1325fc9b1788"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const ESTADO_REF = db.collection('estado').doc('pedido-despensa');
+
+let _guardando = false; // evita que nuestro propio guardado dispare un re-render innecesario
+let _firebaseListo = false;
+
 function guardarEstado() {
-  try {
-    localStorage.setItem('SA_ESTADO', JSON.stringify({ items, mermas, proveedores, plantillas }));
-  } catch(e) {}
+  _guardando = true;
+  ESTADO_REF.set({ items, mermas, proveedores, plantillas })
+    .catch(e=>{ console.error('Error guardando en Firebase:', e); mostrarNotif('No se pudo guardar — revisá tu conexión a internet','warn'); })
+    .finally(()=>{ _guardando = false; });
 }
 
-const _e = cargarEstado();
-let items=_e.items, mermas=_e.mermas, proveedores=_e.proveedores, plantillas=_e.plantillas;
+function renderTodo() {
+  previewMacro();
+  renderLista();
+  renderMermas();
+  renderProveedores();
+  renderCronograma();
+  renderPlantillas();
+}
+
+function iniciarSync() {
+  ESTADO_REF.onSnapshot((doc)=>{
+    if (_guardando) return; // si el cambio lo disparamos nosotros, ya tenemos los datos locales actualizados
+    if (doc.exists) {
+      const s = doc.data();
+      items = s.items || [];
+      mermas = (s.mermas && Object.keys(s.mermas).length) ? s.mermas : { ...MERMAS_DEFAULT };
+      proveedores = s.proveedores || [];
+      plantillas = s.plantillas || [];
+    } else {
+      items=[]; mermas={ ...MERMAS_DEFAULT }; proveedores=[]; plantillas=[];
+      ESTADO_REF.set({ items, mermas, proveedores, plantillas });
+    }
+    _firebaseListo = true;
+    renderTodo();
+  }, (err)=>{
+    console.error('Error de conexión con Firebase:', err);
+    mostrarNotif('Sin conexión a la base compartida — revisá tu internet','warn');
+  });
+}
+
+let items=[], mermas={ ...MERMAS_DEFAULT }, proveedores=[], plantillas=[];
 let comboRecetas=[], recSelC='';
 let filtroU='todo',vista='consolidado';
 function getNombres(){ return Object.keys(REC).sort((a,b)=>a.localeCompare(b,'es')); }
@@ -1222,12 +1280,7 @@ function goTab(t){
   if(t==='cargar-recetas')renderGestorRecetas();
 }
 
-previewMacro();
-renderLista();
-renderMermas();
-renderProveedores();
-renderCronograma();
-renderPlantillas();
+iniciarSync();
 
 // ─── PROCESADOR DE ARCHIVOS DE RECETAS (CSV y ZIP) ───
 function procesarArchivoRecetas(input) {
