@@ -822,14 +822,14 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const ESTADO_REF = db.collection('estado').doc('pedido-despensa');
 
-let _guardando = false; // evita que nuestro propio guardado dispare un re-render innecesario
+let _pendingWrites = 0; // cuenta guardados en curso; mientras haya >0 ignoramos snapshots remotos para no pisar cambios locales recientes
 let _firebaseListo = false;
 
 function guardarEstado() {
-  _guardando = true;
+  _pendingWrites++;
   ESTADO_REF.set({ items, mermas, proveedores, plantillas })
     .catch(e=>{ console.error('Error guardando en Firebase:', e); mostrarNotif('No se pudo guardar — revisá tu conexión a internet','warn'); })
-    .finally(()=>{ _guardando = false; });
+    .finally(()=>{ _pendingWrites=Math.max(0,_pendingWrites-1); });
 }
 
 function renderTodo() {
@@ -843,7 +843,7 @@ function renderTodo() {
 
 function iniciarSync() {
   ESTADO_REF.onSnapshot((doc)=>{
-    if (_guardando) return; // si el cambio lo disparamos nosotros, ya tenemos los datos locales actualizados
+    if (doc.metadata.hasPendingWrites || _pendingWrites>0) return; // es un eco de un guardado propio, o todavía hay guardados nuestros en vuelo: no pisar
     if (doc.exists) {
       const s = doc.data();
       items = s.items || [];
