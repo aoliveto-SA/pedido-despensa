@@ -448,6 +448,11 @@ function saEsElementoSeguro(el){
 function saBloquearElemento(el){
   const tag=el.tagName;
   if(tag!=='INPUT'&&tag!=='SELECT'&&tag!=='BUTTON'&&tag!=='TEXTAREA') return;
+  // Modal de login: nunca debe bloquearse, o no se podría ni escribir la clave.
+  if(el.closest && el.closest('#saLoginOverlay')){
+    if(el.dataset.saLocked==='1'){ el.disabled=false; delete el.dataset.saLocked; }
+    return;
+  }
   // Proveedores: se puede editar libremente sin necesidad de clave de admin.
   if(el.closest && el.closest('#tab-proveedores')){
     if(el.dataset.saLocked==='1'){ el.disabled=false; delete el.dataset.saLocked; }
