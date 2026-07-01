@@ -1041,7 +1041,17 @@ function iniciarSync() {
       proveedores = s.proveedores || [];
       plantillas = s.plantillas || [];
       cronOverrides = s.cronOverrides || {};
-      semanaInicio = s.semanaInicio || mondayActual();
+      const lunesActual = mondayActual();
+      const semanaGuardada = s.semanaInicio || lunesActual;
+      // Si la semana guardada quedó atrasada (de una semana anterior), la actualizamos
+      // automáticamente a la semana que está transitando en lugar de dejarla vieja.
+      if (parseISODate(semanaGuardada) < parseISODate(lunesActual)) {
+        semanaInicio = lunesActual;
+        cronOverrides = {}; // los overrides manuales de pedido/entrega eran de la semana vieja
+        guardarEstado();
+      } else {
+        semanaInicio = semanaGuardada;
+      }
     } else {
       items=[]; mermas={ ...MERMAS_DEFAULT }; proveedores=[]; plantillas=[]; cronOverrides={}; semanaInicio=mondayActual();
       ESTADO_REF.set({ items, mermas, proveedores, plantillas, cronOverrides, semanaInicio });
