@@ -1452,21 +1452,38 @@ function renderCronograma(){
 function exportCronogramaXLSX(){
   const filas=calcCronograma();
   if(!filas.length){mostrarNotif('No hay nada para exportar','warn');return;}
-  const datos=filas.map(f=>({
-    'Día de uso':f.dia,
-    'Fecha de uso':toISODate(f.fechaNecesaria),
-    'Rubro':f.proveedor?(f.proveedor.rubro||f.proveedor.nombre):'Sin rubro asignado',
-    'Ingrediente':f.nombre,
-    'Cantidad':fmtNum(f.cant),
-    'Unidad':f.u,
-    'Debe llegar':toISODate(f.fechaEntrega),
-    'Pedir el':toISODate(f.fechaPedido),
-    'Ajuste manual':(f.manualEntrega||f.manualPedido)?'Sí':''
-  }));
-  const ws=XLSX.utils.json_to_sheet(datos);
-  ws['!cols']=[{wch:12},{wch:12},{wch:22},{wch:28},{wch:10},{wch:8},{wch:12},{wch:12},{wch:12}];
+
+  // Agrupar por día de uso (mismo orden que se ve en pantalla)
+  const porDia={};
+  filas.forEach(f=>{ if(!porDia[f.dia]) porDia[f.dia]=[]; porDia[f.dia].push(f); });
+  const diasPresentes=DIAS_ORDEN.filter(d=>porDia[d]);
+
   const wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb,ws,'Cronograma pedidos');
+  const nombresUsados={};
+
+  diasPresentes.forEach(dia=>{
+    const filasDia=porDia[dia];
+    const fecha=filasDia[0].fechaNecesaria;
+    const datos=filasDia.map(f=>({
+      'Rubro':f.proveedor?(f.proveedor.rubro||f.proveedor.nombre):'Sin rubro asignado',
+      'Ingrediente':f.nombre,
+      'Cantidad':fmtNum(f.cant),
+      'Unidad':f.u,
+      'Debe llegar':toISODate(f.fechaEntrega),
+      'Pedir el':toISODate(f.fechaPedido),
+      'Ajuste manual':(f.manualEntrega||f.manualPedido)?'Sí':''
+    }));
+    const ws=XLSX.utils.json_to_sheet(datos);
+    ws['!cols']=[{wch:22},{wch:28},{wch:10},{wch:8},{wch:12},{wch:12},{wch:12}];
+
+    // Nombre de hoja: "Lunes 07-07" — Excel exige máx. 31 caracteres y prohíbe : \ / ? * [ ]
+    let nombreHoja=(dia+' '+fmtFecha(fecha)).replace(/[:\\\/\?\*\[\]]/g,'-').slice(0,31);
+    if(nombresUsados[nombreHoja]){ nombresUsados[nombreHoja]++; nombreHoja=nombreHoja.slice(0,28)+'_'+nombresUsados[nombreHoja]; }
+    else nombresUsados[nombreHoja]=1;
+
+    XLSX.utils.book_append_sheet(wb,ws,nombreHoja);
+  });
+
   XLSX.writeFile(wb,'cronograma_pedidos_'+new Date().toISOString().slice(0,10)+'.xlsx');
 }
 
