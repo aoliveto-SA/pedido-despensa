@@ -107,13 +107,39 @@ tr:hover td{background:var(--fondo)}
 .dia-sec{margin-bottom:20px}
 .dia-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--gris);padding:6px 0;margin-bottom:8px;border-bottom:2px solid var(--borde)}
 .section-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+/* Control de acceso admin */
+.sa-badge{font-size:11px;padding:6px 10px;border-radius:20px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.sa-badge b{font-weight:600}
+.sa-overlay{display:none;position:fixed;inset:0;background:rgba(17,24,39,.55);z-index:1000;align-items:center;justify-content:center;padding:16px}
+.sa-modal{background:#fff;border-radius:12px;padding:22px 20px;max-width:320px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,.25)}
+.sa-modal h3{font-size:15px;margin-bottom:4px;color:var(--texto)}
+.sa-modal p{font-size:12px;color:var(--gris);margin-bottom:14px}
+.sa-modal input{width:100%;padding:10px 12px;font-size:16px;letter-spacing:2px;text-align:center;border:1px solid var(--borde);border-radius:8px;margin-bottom:10px}
+.sa-modal .sa-err{display:none;color:var(--rojo);font-size:12px;margin:-4px 0 10px}
+.sa-modal-btns{display:flex;gap:8px}
+.sa-modal-btns button{flex:1;padding:9px;font-size:13px;border-radius:8px;border:1px solid var(--borde);background:var(--blanco);cursor:pointer;font-family:inherit}
+.sa-modal-btns button.sa-primary{background:var(--verde);border-color:var(--verde);color:#fff;font-weight:600}
 </style>
 </head>
 <body>
-<div class="header">
+<div class="header" style="justify-content:space-between">
   <div>
     <h1>🏥 Pedido a Despensa</h1>
     <p>Sanatorio Allende Cerro — Sistema de gestión de pedidos</p>
+  </div>
+  <div id="saAdminBadge" class="sa-badge"></div>
+</div>
+
+<div id="saLoginOverlay" class="sa-overlay">
+  <div class="sa-modal">
+    <h3>🔒 Acceso de edición</h3>
+    <p>Ingresá la clave de administrador para poder editar. Sin la clave, el sistema queda en modo lectura y podés seguir descargando los archivos.</p>
+    <input type="password" id="saClaveInput" inputmode="numeric" maxlength="12" placeholder="Clave" onkeydown="if(event.key==='Enter')saIntentarLogin()">
+    <div class="sa-err" id="saLoginError">Clave incorrecta.</div>
+    <div class="sa-modal-btns">
+      <button onclick="saCerrarLogin()">Cancelar</button>
+      <button class="sa-primary" onclick="saIntentarLogin()">Ingresar</button>
+    </div>
   </div>
 </div>
 
@@ -396,6 +422,98 @@ tr:hover td{background:var(--fondo)}
 </div>
 
 <script>
+// ════════════════════════════════════════════
+// CONTROL DE ACCESO — MODO LECTURA / ADMIN
+// ════════════════════════════════════════════
+const SA_ADMIN_PASS = '134679';
+let SA_ES_ADMIN = sessionStorage.getItem('SA_ADMIN') === '1';
+
+// Funciones consideradas "seguras" en modo lectura: navegación, filtros de vista y descargas.
+// No modifican datos guardados, así que quedan habilitadas aunque no se haya iniciado sesión de admin.
+const SA_RO_SAFE_RE = /^(goTab|setVista|setFiltro|exportXLSXPorDia|exportCronogramaXLSX|copiar|renderCronograma|renderGestorRecetas|filtrarC|closeDrop)\s*\(/;
+
+function saEsElementoSeguro(el){
+  if(el.classList && el.classList.contains('tab')) return true;
+  const attrs=['onclick','onchange','oninput','onfocus'];
+  for(const a of attrs){
+    const v=el.getAttribute(a);
+    if(v && SA_RO_SAFE_RE.test(v.trim())) return true;
+  }
+  return false;
+}
+
+function saBloquearElemento(el){
+  const tag=el.tagName;
+  if(tag!=='INPUT'&&tag!=='SELECT'&&tag!=='BUTTON'&&tag!=='TEXTAREA') return;
+  if(SA_ES_ADMIN){
+    if(el.dataset.saLocked==='1'){ el.disabled=false; delete el.dataset.saLocked; }
+    return;
+  }
+  if(saEsElementoSeguro(el)) return;
+  if(!el.disabled){ el.disabled=true; el.dataset.saLocked='1'; }
+}
+
+function saAplicarModo(root){
+  if(!root) return;
+  if(root.nodeType===1 && root.matches && root.matches('input,select,button,textarea')) saBloquearElemento(root);
+  if(root.querySelectorAll) root.querySelectorAll('input,select,button,textarea').forEach(saBloquearElemento);
+}
+
+function saActualizarBadge(){
+  const b=document.getElementById('saAdminBadge');
+  if(!b) return;
+  if(SA_ES_ADMIN){
+    b.style.background='rgba(255,255,255,.18)';
+    b.innerHTML='🔓 <b>Modo edición (Admin)</b> · <span style="text-decoration:underline;cursor:pointer" onclick="saSalirAdmin()">Salir</span>';
+  }else{
+    b.style.background='rgba(0,0,0,.18)';
+    b.innerHTML='🔒 <b>Modo lectura</b> · <span style="text-decoration:underline;cursor:pointer" onclick="saAbrirLogin()">Ingresar como admin</span>';
+  }
+}
+
+function saAbrirLogin(){
+  document.getElementById('saLoginOverlay').style.display='flex';
+  document.getElementById('saLoginError').style.display='none';
+  const inp=document.getElementById('saClaveInput');
+  inp.value='';
+  setTimeout(()=>inp.focus(),50);
+}
+function saCerrarLogin(){
+  document.getElementById('saLoginOverlay').style.display='none';
+}
+function saIntentarLogin(){
+  const val=document.getElementById('saClaveInput').value.trim();
+  if(val===SA_ADMIN_PASS){
+    SA_ES_ADMIN=true;
+    sessionStorage.setItem('SA_ADMIN','1');
+    saAplicarModo(document);
+    saActualizarBadge();
+    saCerrarLogin();
+    if(typeof mostrarNotif==='function') mostrarNotif('✓ Modo edición activado');
+  }else{
+    document.getElementById('saLoginError').style.display='block';
+  }
+}
+function saSalirAdmin(){
+  SA_ES_ADMIN=false;
+  sessionStorage.removeItem('SA_ADMIN');
+  saAplicarModo(document);
+  saActualizarBadge();
+  if(typeof mostrarNotif==='function') mostrarNotif('Modo lectura activado');
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  saAplicarModo(document);
+  saActualizarBadge();
+  const cont=document.querySelector('.container')||document.body;
+  const saObs=new MutationObserver(muts=>{
+    for(const m of muts){
+      m.addedNodes.forEach(n=>{ if(n.nodeType===1) saAplicarModo(n); });
+    }
+  });
+  saObs.observe(cont,{childList:true,subtree:true});
+});
+
 // ════════════════════════════════════════════
 // CUADRO MACRO
 // ════════════════════════════════════════════
