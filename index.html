@@ -1811,6 +1811,10 @@ function procesarArchivoRecetas(input) {
       log.innerHTML = formatearLog([resultado]);
       persistirRecetasExt();
       renderGestorRecetas();
+      if (resultado.ok) {
+        const n = resincronizarMenuConRecetas([resultado.nombre]);
+        if (n > 0) mostrarNotif(`✓ Receta actualizada — ${n} plato${n>1?'s':''} del menú recalculado${n>1?'s':''} automáticamente`, 'ok');
+      }
     };
     reader.readAsArrayBuffer(file);
   } else {
@@ -1824,6 +1828,10 @@ function procesarArchivoRecetas(input) {
       log.innerHTML = formatearLog([resultado]);
       persistirRecetasExt();
       renderGestorRecetas();
+      if (resultado.ok) {
+        const n = resincronizarMenuConRecetas([resultado.nombre]);
+        if (n > 0) mostrarNotif(`✓ Receta actualizada — ${n} plato${n>1?'s':''} del menú recalculado${n>1?'s':''} automáticamente`, 'ok');
+      }
     };
     reader.readAsArrayBuffer(file);
   }
@@ -1894,11 +1902,17 @@ async function procesarZIP(file) {
     persistirRecetasExt();
     renderGestorRecetas();
 
+    const nombresOk = resultados.filter(r => r.ok).map(r => r.nombre);
+    const platosActualizados = resincronizarMenuConRecetas(nombresOk);
+
     const htmlDebug = `<details style="margin-top:8px;font-size:11px;color:var(--gris)">
       <summary style="cursor:pointer">Ver todos los archivos del ZIP (${todosLosArchivos.length})</summary>
       <div style="margin-top:4px">${todosLosArchivos.map(p=>`• ${p}`).join('<br>')}</div>
     </details>`;
-    log.innerHTML = formatearLog(resultados) + htmlDebug;
+    const htmlResync = platosActualizados > 0
+      ? `<p style="margin-top:6px;color:var(--verde,#2e7d32)">✓ ${platosActualizados} plato${platosActualizados>1?'s':''} del menú ya cargado recalculado${platosActualizados>1?'s':''} automáticamente con los nuevos ingredientes.</p>`
+      : '';
+    log.innerHTML = formatearLog(resultados) + htmlResync + htmlDebug;
 
   } catch(err) {
     log.innerHTML = `<span style="color:var(--rojo)">⚠ Error al leer el ZIP: ${err.message}</span>`;
@@ -2035,6 +2049,29 @@ function detectarTipoReceta(nombre) {
   return 'PP';
 }
 
+
+// Recorre los platos ya cargados en el menú (items) y, para los que usan alguna
+// de las recetas recién subidas/actualizadas, vuelve a copiar sus ingredientes
+// desde REC (la versión nueva). Así no hace falta rearmar el menú a mano cada
+// vez que se sube una receta modificada.
+function resincronizarMenuConRecetas(nombresActualizados) {
+  if (!nombresActualizados || !nombresActualizados.length || !items || !items.length) return 0;
+  let platosActualizados = 0;
+  items.forEach(it => {
+    if (!it.recetas || !it.recetas.some(r => nombresActualizados.includes(r))) return;
+    const nuevosIngredientes = [];
+    it.recetas.forEach(r => {
+      if (REC[r]) REC[r].i.forEach(ing => nuevosIngredientes.push({ ...ing }));
+    });
+    it.ingredientes = nuevosIngredientes;
+    platosActualizados++;
+  });
+  if (platosActualizados > 0) {
+    guardarEstado();
+    renderLista();
+  }
+  return platosActualizados;
+}
 
 function persistirRecetasExt() {
   // Guardamos sólo las que no venían en el código base original
