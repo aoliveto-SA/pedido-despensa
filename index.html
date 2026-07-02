@@ -79,6 +79,10 @@ select:focus,input:focus{outline:2px solid var(--azul);border-color:transparent}
 .mrow-detalle{padding:0 0 8px 0}
 .mrow .porinp{width:52px !important;flex:0 0 52px}
 .mrow .del{flex:0 0 auto}
+.rec-detalle{padding:8px 12px 12px;background:var(--fondo);border-bottom:1px solid var(--borde)}
+.rec-ing-row{display:flex;justify-content:space-between;gap:10px;padding:3px 0;font-size:12.5px;border-bottom:1px solid #e5e7eb}
+.rec-ing-row:last-of-type{border-bottom:none}
+.rec-ing-cant{color:var(--azul-txt);font-weight:600;white-space:nowrap}
 @media (max-width:640px){
   .dia-acc-body{grid-template-columns:1fr}
   .dia-acc-col:first-child{border-right:none;border-bottom:1px solid var(--borde)}
@@ -417,10 +421,11 @@ tr:hover td{background:var(--fondo)}
 
   <!-- ── GESTIÓN DE RECETAS ── -->
   <div class="card" style="margin-top:0">
-    <div class="card-title">
-      📋 Gestión de recetas
-      <span id="rec-contador" style="font-size:11px;font-weight:400;color:var(--gris)"></span>
+    <div class="card-title" style="flex-wrap:wrap;gap:6px">
+      <span>📋 Gestión de recetas <span id="rec-contador" style="font-size:11px;font-weight:400;color:var(--gris)"></span></span>
+      <button class="btn btn-s" style="font-size:11px;padding:4px 10px" title="Descargar todas las recetas visibles con sus ingredientes y cantidades" onclick="exportarRecetarioXLSX()">↓ Descargar Excel</button>
     </div>
+    <p style="font-size:11.5px;color:var(--gris);margin-bottom:10px;margin-top:-6px">Tocá una receta para ver sus ingredientes y cantidades, o descargalas en Excel — todas juntas o una por una.</p>
     <div class="form-row" style="margin-bottom:10px;gap:8px">
       <div class="form-col grow">
         <input type="text" id="rec-buscar" placeholder="Buscar receta por nombre..." oninput="renderGestorRecetas()" style="width:100%">
@@ -486,7 +491,7 @@ function saCambiarSede(id){
 
 // Funciones consideradas "seguras" en modo lectura: navegación, filtros de vista y descargas.
 // No modifican datos guardados, así que quedan habilitadas aunque no se haya iniciado sesión de admin.
-const SA_RO_SAFE_RE = /^(goTab|setVista|setFiltro|exportXLSXPorDia|exportCronogramaXLSX|copiar|renderCronograma|renderGestorRecetas|filtrarC|closeDrop|saCambiarSede)\s*\(/;
+const SA_RO_SAFE_RE = /^(goTab|setVista|setFiltro|exportXLSXPorDia|exportCronogramaXLSX|copiar|renderCronograma|renderGestorRecetas|filtrarC|closeDrop|saCambiarSede|toggleDetalleReceta|exportarRecetaXLSX|exportarRecetarioXLSX|toggleDiaMenu|toggleDetalleMenu|expandirTodoMenu|colapsarTodoMenu)\s*\(/;
 
 // IDs de elementos que quedan habilitados en modo lectura aunque no coincidan con SA_RO_SAFE_RE.
 // La carga de recetas (CSV/ZIP) ahora también requiere clave de admin.
@@ -1260,6 +1265,8 @@ function toggleDiaMenu(dia){
   if(menuDiasAbiertos.has(dia)) menuDiasAbiertos.delete(dia); else menuDiasAbiertos.add(dia);
   renderLista();
 }
+function expandirTodoMenu(dias){ menuDiasAbiertos=new Set(dias); renderLista(); }
+function colapsarTodoMenu(){ menuDiasAbiertos=new Set(); renderLista(); }
 function toggleDetalleMenu(id){
   const d=document.getElementById('detalle-'+id);
   if(d) d.style.display = d.style.display==='none' ? 'block' : 'none';
@@ -1293,8 +1300,8 @@ function renderLista(){
   const cab=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px">
     <span style="font-size:12px;color:var(--gris)">${diasPresentes.length} día${diasPresentes.length!==1?'s':''} cargado${diasPresentes.length!==1?'s':''} · ${items.length} plato${items.length!==1?'s':''}</span>
     <div style="display:flex;gap:6px">
-      <button class="btn btn-s" style="font-size:11px;padding:3px 8px" onclick='menuDiasAbiertos=new Set(${JSON.stringify(diasPresentes)});renderLista()'>Expandir todo</button>
-      <button class="btn btn-s" style="font-size:11px;padding:3px 8px" onclick="menuDiasAbiertos=new Set();renderLista()">Colapsar todo</button>
+      <button class="btn btn-s" style="font-size:11px;padding:3px 8px" onclick='expandirTodoMenu(${JSON.stringify(diasPresentes)})'>Expandir todo</button>
+      <button class="btn btn-s" style="font-size:11px;padding:3px 8px" onclick="colapsarTodoMenu()">Colapsar todo</button>
     </div>
   </div>`;
 
@@ -2244,6 +2251,10 @@ function formatearLog(resultados) {
 // (ni una por una, ni en lote, ni el borrado masivo de "recetas importadas").
 // Sí se permite subir/actualizar recetas (ver procesarArchivoRecetas), incluso en modo lectura.
 
+const REC_TIPOS_PILL = {PP:'pill-pp',GU:'pill-gu',EN:'pill-en',SO:'pill-so',PO:'pill-po'};
+const REC_TIPO_LABEL = {PP:'Plato',GU:'Guarnición',EN:'Entrada',SO:'Sopa',PO:'Postre'};
+let recListaActual = [];
+
 function renderGestorRecetas() {
   const q = (document.getElementById('rec-buscar')?.value || '').toLowerCase().trim();
   const tipoF = document.getElementById('rec-filtro-tipo')?.value || '';
@@ -2254,6 +2265,8 @@ function renderGestorRecetas() {
     return pasaNombre && pasaTipo;
   }).sort(([a],[b]) => a.localeCompare(b, 'es'));
 
+  recListaActual = filtrados;
+
   const el = document.getElementById('rec-lista');
   const contador = document.getElementById('rec-contador');
   if (contador) contador.textContent = `${filtrados.length} de ${todos.length} recetas`;
@@ -2263,17 +2276,51 @@ function renderGestorRecetas() {
     return;
   }
 
-  const TIPOS = {PP:'pill-pp',GU:'pill-gu',EN:'pill-en',SO:'pill-so',PO:'pill-po'};
-  const TIPO_LABEL = {PP:'Plato',GU:'Guarnición',EN:'Entrada',SO:'Sopa',PO:'Postre'};
-
-  el.innerHTML = filtrados.map(([nombre, rec]) => {
-    const pillClass = TIPOS[rec.t] || 'pill-ot';
-    return `<div class="irow" style="grid-template-columns:1fr auto auto;gap:8px;align-items:center">
+  el.innerHTML = filtrados.map(([nombre, rec], idx) => {
+    const pillClass = REC_TIPOS_PILL[rec.t] || 'pill-ot';
+    return `<div class="irow" style="grid-template-columns:1fr auto auto;gap:8px;align-items:center;cursor:pointer" onclick="toggleDetalleReceta(${idx})">
       <span style="font-size:13px;font-weight:500">${nombre}</span>
-      <span class="pill ${pillClass}" style="font-size:10px">${TIPO_LABEL[rec.t]||rec.t}</span>
-      <span style="font-size:11px;color:var(--gris);white-space:nowrap">${rec.i.length} ing.</span>
+      <span class="pill ${pillClass}" style="font-size:10px">${REC_TIPO_LABEL[rec.t]||rec.t}</span>
+      <span style="font-size:11px;color:var(--gris);white-space:nowrap">${rec.i.length} ing. ▾</span>
+    </div>
+    <div class="rec-detalle" id="rec-detalle-${idx}" style="display:none">
+      ${rec.i.map(ing=>`<div class="rec-ing-row"><span>${ing.i}</span><span class="rec-ing-cant">${fmtNum(ing.c)} ${ing.u}</span></div>`).join('')}
+      <button class="btn btn-s" style="font-size:11px;padding:4px 10px;margin-top:6px" onclick="event.stopPropagation();exportarRecetaXLSX(${idx})">↓ Descargar esta receta (Excel)</button>
     </div>`;
   }).join('');
+}
+
+function toggleDetalleReceta(idx){
+  const d = document.getElementById('rec-detalle-'+idx);
+  if(d) d.style.display = d.style.display==='none' ? 'block' : 'none';
+}
+
+function exportarRecetaXLSX(idx){
+  const par = recListaActual[idx];
+  if(!par) return;
+  const [nombre, rec] = par;
+  const datos = rec.i.map(ing=>({Receta:nombre, Tipo:REC_TIPO_LABEL[rec.t]||rec.t, Ingrediente:ing.i, Cantidad:ing.c, Unidad:ing.u}));
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet(datos);
+  XLSX.utils.book_append_sheet(wb, ws, 'Ingredientes');
+  const nombreArchivo = nombre.toLowerCase().replace(/[^a-z0-9]+/gi,'_').replace(/^_+|_+$/g,'').slice(0,60);
+  XLSX.writeFile(wb, `receta_${nombreArchivo}.xlsx`);
+}
+
+function exportarRecetarioXLSX(){
+  if(!recListaActual.length){mostrarNotif('No hay recetas para exportar','warn');return;}
+  const datos = [];
+  recListaActual.forEach(([nombre, rec])=>{
+    rec.i.forEach(ing=>{
+      datos.push({Receta:nombre, Tipo:REC_TIPO_LABEL[rec.t]||rec.t, Ingrediente:ing.i, Cantidad:ing.c, Unidad:ing.u});
+    });
+  });
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet(datos);
+  ws['!cols'] = [{wch:32},{wch:12},{wch:28},{wch:10},{wch:10}];
+  XLSX.utils.book_append_sheet(wb, ws, 'Recetario');
+  XLSX.writeFile(wb, 'recetario_ingredientes_'+new Date().toISOString().slice(0,10)+'.xlsx');
+  mostrarNotif(`✓ Descargado (${recListaActual.length} recetas)`);
 }
 
 // Se mantienen como no-operativas (defensivas) por si quedara alguna referencia residual:
