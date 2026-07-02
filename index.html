@@ -77,9 +77,17 @@ select:focus,input:focus{outline:2px solid var(--azul);border-color:transparent}
 .mrow-main{display:flex;align-items:center;gap:6px;flex:1;min-width:0;cursor:pointer}
 .mrow-nombre{font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mrow-detalle{padding:0 0 8px 0}
+.mrow .porinp{width:52px !important;flex:0 0 52px}
+.mrow .del{flex:0 0 auto}
 @media (max-width:640px){
   .dia-acc-body{grid-template-columns:1fr}
   .dia-acc-col:first-child{border-right:none;border-bottom:1px solid var(--borde)}
+  .tabs{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{flex:0 0 auto;white-space:nowrap;padding:10px 12px}
+  .ilist{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .container{padding:12px}
+  .header{padding:12px 14px}
 }
 /* Search dropdown */
 .srch{position:relative}
@@ -1534,6 +1542,7 @@ function renderCronograma(){
         return `<div style="margin-bottom:12px">
           <div style="font-size:12px;font-weight:600;margin-bottom:6px">🏷 ${rubro}</div>
           <div class="card" style="padding:0;overflow:hidden;margin-bottom:0">
+            <div style="overflow-x:auto">
             <table>
               <thead><tr>
                 <th>Ingrediente</th><th>Debe llegar</th><th>Pedir el</th><th style="text-align:right">Cant.</th><th></th>
@@ -1548,6 +1557,7 @@ function renderCronograma(){
                 </tr>`).join('')}
               </tbody>
             </table>
+            </div>
           </div>
         </div>`;
       }).join('')}
@@ -1700,6 +1710,7 @@ function renderPedido(){
 
   const generarTablaHTML = (lista, esVistaConsolidado, mostrarProveedor = false) => {
     return `<div class="card" style="padding:0;overflow:hidden;margin-bottom:20px;">
+      <div style="overflow-x:auto">
       <table>
         <thead>
           <tr>
@@ -1725,6 +1736,7 @@ function renderPedido(){
           }).join('')}
         </tbody>
       </table>
+      </div>
     </div>`;
   };
 
