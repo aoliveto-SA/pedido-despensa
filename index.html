@@ -1170,7 +1170,7 @@ function cargarDesdeMacro(){
   const sinRec=rec.filter(r=>!REC[r]);
   if(!conRec.length){mostrarNotif('Ninguna receta del macro tiene ingredientes cargados','warn');return;}
   const ings=[];
-  conRec.forEach(r=>REC[r].i.forEach(ing=>ings.push({...ing})));
+  conRec.forEach(r=>REC[r].i.forEach(ing=>ings.push({...ing,receta:r})));
   items.push({dia,srv,diet,nombre:conRec.join(' + '),recetas:conRec,ingredientes:ings,porciones:por,id:Date.now(),esCombo:true,desdeMacro:true});
   renderLista();guardarEstado();
   let msg=`✓ ${conRec.length} platos cargados — ${DIETAS[diet]}, ${dia} ${srv}`;
@@ -1221,7 +1221,7 @@ function confirmarCombo(){
   const diet=document.getElementById('cDieta').value;
   const por=parseInt(document.getElementById('cPor').value)||1;
   const ings=[];
-  comboRecetas.forEach(r=>REC[r].i.forEach(ing=>ings.push({...ing})));
+  comboRecetas.forEach(r=>REC[r].i.forEach(ing=>ings.push({...ing,receta:r})));
   items.push({dia,srv,diet,nombre:comboRecetas.join(' + '),recetas:[...comboRecetas],ingredientes:ings,porciones:por,id:Date.now(),esCombo:true});
   comboRecetas=[];renderComboActual();renderLista();guardarEstado();
   mostrarNotif('✓ Combo agregado al menú');
@@ -1243,7 +1243,7 @@ function cargarPlantilla(id){
   const diet=document.getElementById('cDieta').value;
   const por=parseInt(document.getElementById('cPor').value)||30;
   const ings=[];
-  p.recetas.filter(r=>REC[r]).forEach(r=>REC[r].i.forEach(ing=>ings.push({...ing})));
+  p.recetas.filter(r=>REC[r]).forEach(r=>REC[r].i.forEach(ing=>ings.push({...ing,receta:r})));
   items.push({dia,srv,diet,nombre:p.recetas.join(' + '),recetas:[...p.recetas],ingredientes:ings,porciones:por,id:Date.now(),esCombo:true});
   renderLista();
   mostrarNotif(`✓ Plantilla "${p.nombre}" → ${DIETAS[diet]}, ${dia} ${srv}, ${por} porciones`);
@@ -1660,8 +1660,9 @@ function calcTotales(){
       
       const cat=getUCat(ing.u);
       const key=ing.i.toLowerCase().trim()+'|||'+cat;
-      if(!tot[key]) tot[key]={nombre:ing.i,cat,u:ing.u,cant:0,esSopa:false};
+      if(!tot[key]) tot[key]={nombre:ing.i,cat,u:ing.u,cant:0,esSopa:false,recetasOrigen:new Set()};
       tot[key].cant += ing.c * it.porciones;
+      if(ing.receta) tot[key].recetasOrigen.add(ing.receta);
     });
   });
 
@@ -1671,7 +1672,7 @@ function calcTotales(){
     SOPA_MIX_BASE.forEach(ing=>{
       const cat=getUCat(ing.u);
       const key=ing.i.toLowerCase().trim()+'|||'+cat;
-      if(!tot[key]) tot[key]={nombre:ing.i,cat,u:ing.u,cant:0,esSopa:false};
+      if(!tot[key]) tot[key]={nombre:ing.i,cat,u:ing.u,cant:0,esSopa:false,recetasOrigen:new Set()};
       tot[key].cant += ing.c*bolsas;
       tot[key].esSopa=true;
     });
@@ -1679,7 +1680,7 @@ function calcTotales(){
 
   return Object.values(tot).map(r=>{
     const m=getMerma(r.nombre);
-    return {...r, merma:m, cantConMerma: r.cant*(1+m)};
+    return {...r, recetas:[...r.recetasOrigen], merma:m, cantConMerma: r.cant*(1+m)};
   }).sort((a,b)=>a.nombre.localeCompare(b.nombre,'es'));
 }
 
@@ -1732,8 +1733,11 @@ function renderPedido(){
         <tbody>
           ${lista.map(r=>{
             const p = mostrarProveedor ? getProv(r.nombre) : null;
+            const origenHTML = (r.recetas && r.recetas.length)
+              ? `<div style="font-size:11px;color:var(--gris);margin-top:2px;font-weight:400">de: ${r.recetas.join(' · ')}</div>`
+              : '';
             return `<tr>
-              <td>${r.nombre}</td>
+              <td>${r.nombre}${origenHTML}</td>
               <td class="num-dim">${fmtNum(r.cant)}</td>
               ${esVistaConsolidado ? `<td style="text-align:right;color:var(--rojo);font-size:12px;font-weight:500">${r.merma>0?'+'+Math.round(r.merma*100)+'%':'—'}</td>` : ''}
               <td class="num" style="font-size:15px;color:var(--azul)">${fmtNum(r.cantConMerma)}</td>
@@ -1777,8 +1781,9 @@ function renderPedido(){
           if(tieneSopa && esIngredienteDeSopa(it, ing)) return;
           const cat=getUCat(ing.u);
           const key=ing.i.toLowerCase().trim()+'|||'+cat;
-          if(!totDia[key]) totDia[key]={nombre:ing.i,cat,u:ing.u,cant:0,esSopa:false};
+          if(!totDia[key]) totDia[key]={nombre:ing.i,cat,u:ing.u,cant:0,esSopa:false,recetasOrigen:new Set()};
           totDia[key].cant += ing.c * it.porciones;
+          if(ing.receta) totDia[key].recetasOrigen.add(ing.receta);
         });
       });
 
@@ -1789,7 +1794,7 @@ function renderPedido(){
         SOPA_MIX_BASE.forEach(ing=>{
           const cat=getUCat(ing.u);
           const key=ing.i.toLowerCase().trim()+'|||'+cat;
-          if(!totDia[key]) totDia[key]={nombre:ing.i,cat,u:ing.u,cant:0,esSopa:false};
+          if(!totDia[key]) totDia[key]={nombre:ing.i,cat,u:ing.u,cant:0,esSopa:false,recetasOrigen:new Set()};
           totDia[key].cant += ing.c*factor;
           totDia[key].esSopa=true;
         });
@@ -1797,7 +1802,7 @@ function renderPedido(){
 
       const rowsDia=Object.values(totDia).map(r=>{
         const m=getMerma(r.nombre);
-        return {...r, merma:m, cantConMerma: r.cant*(1+m)};
+        return {...r, recetas:[...r.recetasOrigen], merma:m, cantConMerma: r.cant*(1+m)};
       }).sort((a,b)=>a.nombre.localeCompare(b.nombre,'es'));
 
       const visDia=filtroU==='todo'?rowsDia:(filtroU==='s'?rowsDia.filter(r=>r.esSopa):rowsDia.filter(r=>r.cat===filtroU));
@@ -1832,7 +1837,7 @@ function copiar(){
 }
 function exportCSV(){
   const tots=calcTotales();
-  const csv='\uFEFFIngrediente,Cantidad receta,Merma %,Cantidad a pedir,Unidad,Proveedor,Días entrega\n'+tots.map(r=>{const p=getProv(r.nombre);return`"${r.nombre}",${fmtNum(r.cant)},${Math.round(r.merma*100)},${fmtNum(r.cantConMerma)},"${r.u}","${p?p.nombre:''}","${p?p.dias:''}"`}).join('\n');
+  const csv='\uFEFFIngrediente,Cantidad receta,Merma %,Cantidad a pedir,Unidad,Receta origen,Proveedor,Días entrega\n'+tots.map(r=>{const p=getProv(r.nombre);return`"${r.nombre}",${fmtNum(r.cant)},${Math.round(r.merma*100)},${fmtNum(r.cantConMerma)},"${r.u}","${(r.recetas||[]).join(' · ')}","${p?p.nombre:''}","${p?p.dias:''}"`}).join('\n');
   const a=document.createElement('a');
   a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
   a.download='pedido_despensa_'+new Date().toISOString().slice(0,10)+'.csv';
@@ -1865,8 +1870,9 @@ function exportXLSXPorDia(){
         if(tieneSopa && esIngredienteDeSopa(it, ing)) return;
         const cat=getUCat(ing.u);
         const key=ing.i.toLowerCase().trim()+'|||'+cat;
-        if(!totDia[key]) totDia[key]={nombre:ing.i,cat,u:ing.u,cant:0,esSopa:false};
+        if(!totDia[key]) totDia[key]={nombre:ing.i,cat,u:ing.u,cant:0,esSopa:false,recetasOrigen:new Set()};
         totDia[key].cant += ing.c * it.porciones;
+        if(ing.receta) totDia[key].recetasOrigen.add(ing.receta);
       });
     });
 
@@ -1876,7 +1882,7 @@ function exportXLSXPorDia(){
       SOPA_MIX_BASE.forEach(ing=>{
         const cat=getUCat(ing.u);
         const key=ing.i.toLowerCase().trim()+'|||'+cat;
-        if(!totDia[key]) totDia[key]={nombre:ing.i,cat,u:ing.u,cant:0,esSopa:false};
+        if(!totDia[key]) totDia[key]={nombre:ing.i,cat,u:ing.u,cant:0,esSopa:false,recetasOrigen:new Set()};
         totDia[key].cant += ing.c*factor;
         totDia[key].esSopa=true;
       });
@@ -1884,7 +1890,7 @@ function exportXLSXPorDia(){
 
     const rowsDia=Object.values(totDia).map(r=>{
       const m=getMerma(r.nombre);
-      return {...r, merma:m, cantConMerma: r.cant*(1+m)};
+      return {...r, recetas:[...r.recetasOrigen], merma:m, cantConMerma: r.cant*(1+m)};
     }).sort((a,b)=>a.nombre.localeCompare(b.nombre,'es'));
 
     const datos = rowsDia.map(r=>{
@@ -1895,6 +1901,7 @@ function exportXLSXPorDia(){
         'Merma %': Math.round(r.merma*100),
         'Cantidad a pedir': Math.round(r.cantConMerma*100)/100,
         'Unidad': r.u,
+        'Receta origen': r.recetas.join(' · '),
         'Proveedor': p?p.nombre:'',
         'Días entrega': p?p.dias:''
       };
@@ -1904,7 +1911,7 @@ function exportXLSXPorDia(){
       bolsasDia>0 ? [[`🍲 Mix de sopa: ${bolsasDia} ${bolsasDia===1?'bolsa':'bolsas'} (5kg c/u)`],[]] : []
     );
     XLSX.utils.sheet_add_json(ws, datos, { origin: bolsasDia>0 ? -1 : 0 });
-    ws['!cols']=[{wch:30},{wch:14},{wch:9},{wch:15},{wch:8},{wch:20},{wch:12}];
+    ws['!cols']=[{wch:30},{wch:14},{wch:9},{wch:15},{wch:8},{wch:24},{wch:20},{wch:12}];
 
     // Excel limita los nombres de hoja a 31 caracteres y no admite : \ / ? * [ ]
     let nombreHoja = dia.replace(/[:\\\/\?\*\[\]]/g,'-').slice(0,31);
