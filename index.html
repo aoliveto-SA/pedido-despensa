@@ -450,7 +450,7 @@ function saCambiarSede(id){
 
 // Funciones consideradas "seguras" en modo lectura: navegación, filtros de vista y descargas.
 // No modifican datos guardados, así que quedan habilitadas aunque no se haya iniciado sesión de admin.
-const SA_RO_SAFE_RE = /^(goTab|setVista|setFiltro|exportXLSXPorDia|exportCronogramaXLSX|copiar|renderCronograma|renderGestorRecetas|filtrarC|closeDrop|procesarArchivoRecetas)\s*\(/;
+const SA_RO_SAFE_RE = /^(goTab|setVista|setFiltro|exportXLSXPorDia|exportCronogramaXLSX|copiar|renderCronograma|renderGestorRecetas|filtrarC|closeDrop|procesarArchivoRecetas|saCambiarSede)\s*\(/;
 
 // IDs de elementos que quedan habilitados en modo lectura aunque no coincidan con SA_RO_SAFE_RE
 // (permiten SUBIR recetas sin clave; el borrado de recetas sigue bloqueado — ver eliminarReceta/eliminarSeleccionadas).
