@@ -1637,10 +1637,15 @@ function esIngredienteDeSopa(it, ing){
 // Si el ingrediente ya trae la etiqueta "receta" (items cargados con la versión nueva) se usa esa.
 // Si no (items viejos guardados antes de esta función), se deduce comparando contra las recetas
 // del combo — así funciona también con datos ya guardados en Firebase/localStorage.
+// Si tampoco así se encuentra (p.ej. la receta fue renombrada o vuelta a cargar con otro nombre
+// después de armar ese combo), se busca en TODO el recetario actual por si alguna receta viva
+// todavía tiene ese ingrediente exacto — así igual se puede ubicar dónde corregirlo.
 function origenReceta(it, ing){
   if(ing.receta) return [ing.receta];
   const nom=ing.i.toLowerCase().trim();
-  return (it.recetas||[]).filter(r => REC[r] && REC[r].i.some(x => x.i.toLowerCase().trim()===nom));
+  const enCombo = (it.recetas||[]).filter(r => REC[r] && REC[r].i.some(x => x.i.toLowerCase().trim()===nom));
+  if(enCombo.length) return enCombo;
+  return Object.keys(REC).filter(r => REC[r].i.some(x => x.i.toLowerCase().trim()===nom));
 }
 
 function calcTotales(){
