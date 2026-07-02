@@ -63,6 +63,24 @@ select:focus,input:focus{outline:2px solid var(--azul);border-color:transparent}
 .porinp{width:58px;padding:5px 6px;font-size:12px;text-align:center;border:1px solid var(--borde);border-radius:4px;background:var(--blanco)}
 .del{background:none;border:none;cursor:pointer;color:#ccc;font-size:18px;line-height:1;padding:2px 4px}.del:hover{color:var(--rojo)}
 .empty{color:var(--gris);text-align:center;padding:24px;font-size:13px;background:var(--blanco);border:1px dashed var(--borde);border-radius:var(--radio)}
+
+.dia-acc{border:1px solid var(--borde);border-radius:var(--radio);margin-bottom:8px;overflow:hidden;background:var(--blanco)}
+.dia-acc-hdr{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;cursor:pointer;background:var(--fondo);font-size:13px;font-weight:600;user-select:none}
+.dia-acc-hdr:hover{background:var(--azul-claro)}
+.dia-acc-arrow{display:inline-block;transition:transform .15s;color:var(--gris);font-size:10px}
+.dia-acc-body{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--borde)}
+.dia-acc-col{padding:10px 12px;min-width:0}
+.dia-acc-col:first-child{border-right:1px solid var(--borde)}
+.dia-acc-col-hdr{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--gris);margin-bottom:6px}
+.mrow{display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid var(--borde)}
+.mrow:last-child{border-bottom:none}
+.mrow-main{display:flex;align-items:center;gap:6px;flex:1;min-width:0;cursor:pointer}
+.mrow-nombre{font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mrow-detalle{padding:0 0 8px 0}
+@media (max-width:640px){
+  .dia-acc-body{grid-template-columns:1fr}
+  .dia-acc-col:first-child{border-right:none;border-bottom:1px solid var(--borde)}
+}
 /* Search dropdown */
 .srch{position:relative}
 .drop{position:absolute;top:100%;left:0;right:0;background:var(--blanco);border:1px solid var(--borde);border-radius:var(--radio);z-index:200;max-height:200px;overflow-y:auto;display:none;box-shadow:0 8px 24px rgba(0,0,0,.1)}
@@ -555,7 +573,7 @@ function saInicializarSelectorSede(){
       `<option value="${id}"${id===SA_SEDE?' selected':''}>${s.corto}</option>`
     ).join('');
   }
-  if(sub) sub.textContent = 'Sanatorio Allende — Economato - Recetas Internado';
+  if(sub) sub.textContent = 'Sanatorio Allende — Economato — Recetas Internado';
   document.title = 'Sistema de Gestión de Pedidos — ' + SEDES[SA_SEDE].corto;
 }
 
@@ -1229,27 +1247,70 @@ function renderPlantillas(){
 // ─── LISTA MENÚ ───
 function borrar(id){items=items.filter(i=>i.id!==id);renderLista();guardarEstado();}
 function upd(id,val){const it=items.find(i=>i.id===id);if(it){it.porciones=val;guardarEstado();}}
+let menuDiasAbiertos=null;
+function toggleDiaMenu(dia){
+  if(menuDiasAbiertos.has(dia)) menuDiasAbiertos.delete(dia); else menuDiasAbiertos.add(dia);
+  renderLista();
+}
+function toggleDetalleMenu(id){
+  const d=document.getElementById('detalle-'+id);
+  if(d) d.style.display = d.style.display==='none' ? 'block' : 'none';
+}
+function renderColMenu(arr){
+  if(!arr||!arr.length) return `<div style="font-size:11.5px;color:var(--gris);font-style:italic;padding:8px 0;text-align:center">Sin platos</div>`;
+  return arr.map(it=>`
+    <div class="mrow">
+      <div class="mrow-main" onclick="toggleDetalleMenu(${it.id})" title="Ver recetas del combo">
+        <span class="dtag">${DIETAS[it.diet]||it.diet}</span>
+        <span class="mrow-nombre">${it.desdeMacro?'⚡':'🍽'} ${it.nombre.length>42?it.nombre.substring(0,39)+'…':it.nombre}</span>
+      </div>
+      <input class="porinp" type="number" min="1" value="${it.porciones}" onclick="event.stopPropagation()" onchange="upd(${it.id},parseInt(this.value)||1)">
+      <button class="del" onclick="event.stopPropagation();borrar(${it.id})">×</button>
+    </div>
+    <div class="mrow-detalle" id="detalle-${it.id}" style="display:none">
+      ${it.recetas.map(r=>`<span class="${TPILL[REC[r]?REC[r].t:'']||'pill pill-ot'}" style="font-size:10px;margin-right:3px">${r}</span>`).join('')}
+    </div>`).join('');
+}
 function renderLista(){
   const el=document.getElementById('lista');
-  if(!items.length){el.innerHTML='<div class="empty">Cargá platos desde el macro o armá un combo manual</div>';return;}
-  const grupos={};
-  items.forEach(it=>{const k=`${it.dia} · ${it.srv}`;if(!grupos[k])grupos[k]=[];grupos[k].push(it);});
-  el.innerHTML=Object.entries(grupos).map(([g,arr])=>`
-    <div style="margin-bottom:12px">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--gris);padding:4px 0 4px 2px">${g}</div>
-      <div class="ilist">
-        ${arr.map(it=>`<div class="irow" style="grid-template-columns:auto 1fr auto auto auto">
-          <span class="dtag">${DIETAS[it.diet]||it.diet}</span>
-          <div>
-            <div style="font-size:13px;font-weight:500">${it.desdeMacro?'⚡ ':'🍽 '}${it.nombre.length>70?it.nombre.substring(0,67)+'…':it.nombre}</div>
-            <div style="margin-top:2px">${it.recetas.map(r=>`<span class="${TPILL[REC[r]?REC[r].t:'']||'pill pill-ot'}" style="font-size:10px;margin-right:3px">${r.length>28?r.substring(0,26)+'…':r}</span>`).join('')}</div>
-          </div>
-          <input class="porinp" type="number" min="1" value="${it.porciones}" onchange="upd(${it.id},parseInt(this.value)||1)">
-          <span style="font-size:11px;color:var(--gris)">porc.</span>
-          <button class="del" onclick="borrar(${it.id})">×</button>
-        </div>`).join('')}
+  if(!items.length){el.innerHTML='<div class="empty">Cargá platos desde el macro o armá un combo manual</div>';menuDiasAbiertos=null;return;}
+  const porDia={};
+  items.forEach(it=>{
+    if(!porDia[it.dia]) porDia[it.dia]={Almuerzo:[],Cena:[]};
+    (porDia[it.dia][it.srv]=porDia[it.dia][it.srv]||[]).push(it);
+  });
+  const diasPresentes=DIAS_ORDEN.filter(d=>porDia[d]);
+  if(menuDiasAbiertos===null) menuDiasAbiertos=new Set([diasPresentes[0]]);
+
+  const cab=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px">
+    <span style="font-size:12px;color:var(--gris)">${diasPresentes.length} día${diasPresentes.length!==1?'s':''} cargado${diasPresentes.length!==1?'s':''} · ${items.length} plato${items.length!==1?'s':''}</span>
+    <div style="display:flex;gap:6px">
+      <button class="btn btn-s" style="font-size:11px;padding:3px 8px" onclick='menuDiasAbiertos=new Set(${JSON.stringify(diasPresentes)});renderLista()'>Expandir todo</button>
+      <button class="btn btn-s" style="font-size:11px;padding:3px 8px" onclick="menuDiasAbiertos=new Set();renderLista()">Colapsar todo</button>
+    </div>
+  </div>`;
+
+  el.innerHTML=cab+diasPresentes.map(dia=>{
+    const abierto=menuDiasAbiertos.has(dia);
+    const alm=porDia[dia].Almuerzo||[], cen=porDia[dia].Cena||[];
+    const cant=alm.length+cen.length;
+    return `<div class="dia-acc">
+      <div class="dia-acc-hdr" onclick="toggleDiaMenu('${dia}')">
+        <span style="display:flex;align-items:center;gap:8px"><span class="dia-acc-arrow" style="transform:rotate(${abierto?90:0}deg)">▸</span>${dia}</span>
+        <span style="font-size:11px;color:var(--gris);font-weight:500">${cant} plato${cant!==1?'s':''}</span>
       </div>
-    </div>`).join('');
+      ${abierto?`<div class="dia-acc-body">
+        <div class="dia-acc-col">
+          <div class="dia-acc-col-hdr">☀️ Almuerzo (${alm.length})</div>
+          ${renderColMenu(alm)}
+        </div>
+        <div class="dia-acc-col">
+          <div class="dia-acc-col-hdr">🌙 Cena (${cen.length})</div>
+          ${renderColMenu(cen)}
+        </div>
+      </div>`:''}
+    </div>`;
+  }).join('');
 }
 
 // ─── MERMAS ───
