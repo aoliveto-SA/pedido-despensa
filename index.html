@@ -9,14 +9,14 @@
 <style>
 :root{
   --verde:#16a34a;--verde-claro:#dcfce7;--verde-txt:#166534;
-  --azul:#2563eb;--azul-claro:#dbeafe;--azul-txt:#1e40af;
+  --azul:#367fc2;--azul-claro:#e8f2fa;--azul-txt:#1d4f78;
   --rojo:#dc2626;--amarillo:#fef9c3;--amarillo-txt:#854d0e;
   --borde:#e5e7eb;--fondo:#f9fafb;--blanco:#fff;--gris:#6b7280;
   --texto:#111827;--radio:8px;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:system-ui,-apple-system,sans-serif;font-size:13px;color:var(--texto);background:#f3f4f6;min-height:100vh}
-.header{background:var(--verde);color:#fff;padding:14px 20px;display:flex;align-items:center;gap:10px}
+.header{background:var(--azul);color:#fff;padding:14px 20px;display:flex;align-items:center;gap:10px}
 .header h1{font-size:16px;font-weight:600}
 .header p{font-size:12px;opacity:.8;margin-top:2px}
 .container{max-width:960px;margin:0 auto;padding:16px}
@@ -43,7 +43,7 @@ select,input[type=text],input[type=number]{padding:7px 9px;font-size:13px;border
 select:focus,input:focus{outline:2px solid var(--azul);border-color:transparent}
 /* Buttons */
 .btn{padding:7px 14px;font-size:13px;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:500;border:none;transition:.15s}
-.btn-a{background:var(--azul);color:#fff}.btn-a:hover{background:#1d4ed8}
+.btn-a{background:var(--azul);color:#fff}.btn-a:hover{background:#2c689f}
 .btn-g{background:var(--verde);color:#fff}.btn-g:hover{background:#15803d}
 .btn-s{background:none;border:1px solid var(--borde);color:var(--texto)}.btn-s:hover{background:var(--fondo)}
 .btn-w{width:100%;padding:10px;font-size:14px;background:var(--azul);color:#fff;border:none;border-radius:var(--radio);cursor:pointer;font-weight:600;margin-top:8px}
@@ -118,7 +118,7 @@ tr:hover td{background:var(--fondo)}
 .sa-modal .sa-err{display:none;color:var(--rojo);font-size:12px;margin:-4px 0 10px}
 .sa-modal-btns{display:flex;gap:8px}
 .sa-modal-btns button{flex:1;padding:9px;font-size:13px;border-radius:8px;border:1px solid var(--borde);background:var(--blanco);cursor:pointer;font-family:inherit}
-.sa-modal-btns button.sa-primary{background:var(--verde);border-color:var(--verde);color:#fff;font-weight:600}
+.sa-modal-btns button.sa-primary{background:var(--azul);border-color:var(--azul);color:#fff;font-weight:600}
 </style>
 </head>
 <body>
@@ -129,6 +129,7 @@ tr:hover td{background:var(--fondo)}
   </div>
   <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
     <select id="saSedeSelect" onchange="saCambiarSede(this.value)" style="padding:6px 9px;font-size:12px;border-radius:20px;border:none;background:rgba(255,255,255,.18);color:#fff;font-family:inherit;cursor:pointer"></select>
+    <style>#saSedeSelect option{color:#111827;background:#fff}</style>
     <div id="saAdminBadge" class="sa-badge"></div>
   </div>
 </div>
