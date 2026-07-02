@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Pedido a Despensa — Sanatorio Allende Cerro</title>
+<title>Pedido a Despensa</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -122,12 +122,15 @@ tr:hover td{background:var(--fondo)}
 </style>
 </head>
 <body>
-<div class="header" style="justify-content:space-between">
+<div class="header" style="justify-content:space-between;flex-wrap:wrap;gap:8px">
   <div>
     <h1>🏥 Pedido a Despensa</h1>
-    <p>Sanatorio Allende Cerro — Sistema de gestión de pedidos</p>
+    <p id="saSedeSubtitle">Sistema de gestión de pedidos</p>
   </div>
-  <div id="saAdminBadge" class="sa-badge"></div>
+  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+    <select id="saSedeSelect" onchange="saCambiarSede(this.value)" style="padding:6px 9px;font-size:12px;border-radius:20px;border:none;background:rgba(255,255,255,.18);color:#fff;font-family:inherit;cursor:pointer"></select>
+    <div id="saAdminBadge" class="sa-badge"></div>
+  </div>
 </div>
 
 <div id="saLoginOverlay" class="sa-overlay">
@@ -426,6 +429,25 @@ tr:hover td{background:var(--fondo)}
 const SA_ADMIN_PASS = '134679';
 let SA_ES_ADMIN = sessionStorage.getItem('SA_ADMIN') === '1';
 
+// ════════════════════════════════════════════
+// SEDES — cada sede tiene su propia base de datos (Firestore)
+// y su propio storage de recetas, totalmente independientes.
+// Para agregar una sede nueva, sumar una línea acá con un
+// docId de Firestore único (no repetir el de otra sede).
+// ════════════════════════════════════════════
+const SEDES = {
+  cerro:  { nombre: 'Sanatorio Allende Cerro', corto: 'Cerro',         docId: 'pedido-despensa',        recetasKey: 'SA_RECETAS_EXT' },
+  sede2:  { nombre: 'Nueva Córdoba',           corto: 'Nueva Córdoba', docId: 'pedido-despensa-sede2', recetasKey: 'SA_RECETAS_EXT_sede2' }
+};
+let SA_SEDE = localStorage.getItem('SA_SEDE') || 'cerro';
+if (!SEDES[SA_SEDE]) SA_SEDE = 'cerro';
+
+function saCambiarSede(id){
+  if (!SEDES[id] || id === SA_SEDE) return;
+  localStorage.setItem('SA_SEDE', id);
+  location.reload();
+}
+
 // Funciones consideradas "seguras" en modo lectura: navegación, filtros de vista y descargas.
 // No modifican datos guardados, así que quedan habilitadas aunque no se haya iniciado sesión de admin.
 const SA_RO_SAFE_RE = /^(goTab|setVista|setFiltro|exportXLSXPorDia|exportCronogramaXLSX|copiar|renderCronograma|renderGestorRecetas|filtrarC|closeDrop|procesarArchivoRecetas)\s*\(/;
@@ -515,7 +537,20 @@ function saSalirAdmin(){
   if(typeof mostrarNotif==='function') mostrarNotif('Modo lectura activado');
 }
 
+function saInicializarSelectorSede(){
+  const sel=document.getElementById('saSedeSelect');
+  const sub=document.getElementById('saSedeSubtitle');
+  if(sel){
+    sel.innerHTML=Object.entries(SEDES).map(([id,s])=>
+      `<option value="${id}"${id===SA_SEDE?' selected':''}>${s.corto}</option>`
+    ).join('');
+  }
+  if(sub) sub.textContent = 'Sanatorio Allende — Sistema de gestión de pedidos';
+  document.title = 'Pedido a Despensa — ' + SEDES[SA_SEDE].corto;
+}
+
 document.addEventListener('DOMContentLoaded',()=>{
+  saInicializarSelectorSede();
   saAplicarModo(document);
   saActualizarBadge();
   const cont=document.querySelector('.container')||document.body;
@@ -936,7 +971,7 @@ const REC = {
 };
 
 // --- LEER RECETAS EXTERNAS GUARDADAS EN EL NAVEGADOR ---
-const recetasGuardadas = JSON.parse(localStorage.getItem('SA_RECETAS_EXT'));
+const recetasGuardadas = JSON.parse(localStorage.getItem(SEDES[SA_SEDE].recetasKey));
 if (recetasGuardadas) {
   // Limpiar nombres con comillas residuales antes de cargar
   const recetasLimpias = {};
@@ -955,7 +990,7 @@ if (recetasGuardadas) {
     }
   });
   // Persistir la versión limpia (y corregida, si aplicó)
-  localStorage.setItem('SA_RECETAS_EXT', JSON.stringify(huboCorreccion ? Object.fromEntries(Object.entries(REC)) : recetasLimpias));
+  localStorage.setItem(SEDES[SA_SEDE].recetasKey, JSON.stringify(huboCorreccion ? Object.fromEntries(Object.entries(REC)) : recetasLimpias));
 }
 
 const DIETAS={g:'General',l:'Liviano',lc:'Liv. c/carne',n:'Niño',a:'Adolescente',b1:'Bebé 1',b2:'Bebé 2',dbt:'DBT',bcb:'BCB',veg:'Vegetariano',cel:'Celíaco',ast:'Astringente',sl:'Súper liviano',ids4:'IDSSI 4',ids5:'IDSSI 5',ids6:'IDSSI 6',ids7:'IDSSI 7',exc:'Excepción'};
@@ -1010,7 +1045,7 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
-const ESTADO_REF = db.collection('estado').doc('pedido-despensa');
+const ESTADO_REF = db.collection('estado').doc(SEDES[SA_SEDE].docId);
 
 let _pendingWrites = 0; // cuenta guardados en curso; mientras haya >0 ignoramos snapshots remotos para no pisar cambios locales recientes
 let _firebaseListo = false;
@@ -2092,11 +2127,11 @@ function resincronizarMenuConRecetas(nombresActualizados) {
 
 function persistirRecetasExt() {
   // Guardamos sólo las que no venían en el código base original
-  const recetasExt = JSON.parse(localStorage.getItem('SA_RECETAS_EXT') || '{}');
+  const recetasExt = JSON.parse(localStorage.getItem(SEDES[SA_SEDE].recetasKey) || '{}');
   // Re-volcamos todo lo que esté en REC que sea "externo" (ya guardado antes + nuevas)
-  Object.assign(recetasExt, JSON.parse(localStorage.getItem('SA_RECETAS_EXT') || '{}'));
+  Object.assign(recetasExt, JSON.parse(localStorage.getItem(SEDES[SA_SEDE].recetasKey) || '{}'));
   // En realidad simplemente sincronizamos todo REC para no perder nada
-  localStorage.setItem('SA_RECETAS_EXT', JSON.stringify(
+  localStorage.setItem(SEDES[SA_SEDE].recetasKey, JSON.stringify(
     Object.fromEntries(Object.entries(REC))
   ));
 }
