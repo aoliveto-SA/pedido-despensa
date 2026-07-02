@@ -1633,6 +1633,16 @@ function esIngredienteDeSopa(it, ing){
   });
 }
 
+// Devuelve el/los nombres de receta de donde viene un ingrediente puntual de un item.
+// Si el ingrediente ya trae la etiqueta "receta" (items cargados con la versión nueva) se usa esa.
+// Si no (items viejos guardados antes de esta función), se deduce comparando contra las recetas
+// del combo — así funciona también con datos ya guardados en Firebase/localStorage.
+function origenReceta(it, ing){
+  if(ing.receta) return [ing.receta];
+  const nom=ing.i.toLowerCase().trim();
+  return (it.recetas||[]).filter(r => REC[r] && REC[r].i.some(x => x.i.toLowerCase().trim()===nom));
+}
+
 function calcTotales(){
   const tot={};
   let porcionesTotalSopa=0;
@@ -1662,7 +1672,7 @@ function calcTotales(){
       const key=ing.i.toLowerCase().trim()+'|||'+cat;
       if(!tot[key]) tot[key]={nombre:ing.i,cat,u:ing.u,cant:0,esSopa:false,recetasOrigen:new Set()};
       tot[key].cant += ing.c * it.porciones;
-      if(ing.receta) tot[key].recetasOrigen.add(ing.receta);
+      origenReceta(it,ing).forEach(r=>tot[key].recetasOrigen.add(r));
     });
   });
 
@@ -1783,7 +1793,7 @@ function renderPedido(){
           const key=ing.i.toLowerCase().trim()+'|||'+cat;
           if(!totDia[key]) totDia[key]={nombre:ing.i,cat,u:ing.u,cant:0,esSopa:false,recetasOrigen:new Set()};
           totDia[key].cant += ing.c * it.porciones;
-          if(ing.receta) totDia[key].recetasOrigen.add(ing.receta);
+          origenReceta(it,ing).forEach(r=>totDia[key].recetasOrigen.add(r));
         });
       });
 
@@ -1872,7 +1882,7 @@ function exportXLSXPorDia(){
         const key=ing.i.toLowerCase().trim()+'|||'+cat;
         if(!totDia[key]) totDia[key]={nombre:ing.i,cat,u:ing.u,cant:0,esSopa:false,recetasOrigen:new Set()};
         totDia[key].cant += ing.c * it.porciones;
-        if(ing.receta) totDia[key].recetasOrigen.add(ing.receta);
+        origenReceta(it,ing).forEach(r=>totDia[key].recetasOrigen.add(r));
       });
     });
 
