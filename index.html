@@ -352,7 +352,7 @@ tr:hover td{background:var(--fondo)}
     </p>
     <div class="form-row" style="align-items:flex-end">
       <div class="form-col"><label>Semana de referencia (lunes)</label><input type="date" id="semanaInicioInput" style="width:160px" onchange="cambiarSemanaInicio(this.value)"></div>
-      <button class="btn btn-s" onclick="renderCronograma()" style="font-size:12px">↺ Recalcular</button>
+      <button class="btn btn-s" onclick="actualizarProveedoresYCronograma()" style="font-size:12px">🔄 Actualizar / Recalcular</button>
       <button class="btn btn-g" onclick="exportCronogramaXLSX()" style="font-size:12px">↓ Descargar planilla</button>
     </div>
     <div id="cronograma"><div class="empty">Cargá proveedores y armá el menú</div></div>
@@ -406,10 +406,18 @@ tr:hover td{background:var(--fondo)}
     <div style="margin-top:10px" id="macroOverrideInfo"></div>
   </div>
 
+  <div class="card" style="background:linear-gradient(135deg,#f0fdf4,#eff6ff);border-color:#bbf7d0">
+    <div class="card-title">📄 Formato sugerido de receta (plantilla ágil)</div>
+    <p style="font-size:12px;color:var(--gris);margin-bottom:12px;">
+      Descargá esta plantilla Excel para cargar recetas nuevas de forma estandarizada. Tiene una hoja <strong>"Receta"</strong> (nombre, tipo de plato, dieta, porciones e ingredientes — esta es la que el sistema lee automáticamente al subir el archivo), una hoja <strong>"Procedimiento"</strong> para escribir la preparación con todas las letras, y una hoja <strong>"Fotos"</strong> para pegar 1 o 2 fotos del plato. Completala, guardala y subila abajo en "Seleccionar CSV, XLSX o ZIP" — el sistema va a leer los ingredientes automáticamente y vas a tener el resto documentado en el mismo archivo.
+    </p>
+    <button class="btn btn-a" onclick="descargarPlantillaReceta()">↓ Descargar plantilla de receta (Excel)</button>
+  </div>
+
   <div class="card">
     <div class="card-title">📂 Importar o Actualizar Recetas desde CSV o ZIP</div>
     <p style="font-size:12px;color:var(--gris);margin-bottom:12px;">
-      Podés subir un <strong>CSV</strong> individual o un <strong>ZIP con varios CSVs</strong> a la vez (ej: desde Google Drive). Si la receta ya existe se actualiza; si es nueva se agrega. Los datos de menú, mermas, proveedores y plantillas se guardan automáticamente en el navegador.
+      Podés subir un <strong>CSV</strong> individual o un <strong>ZIP con varios CSVs</strong> a la vez (ej: desde Google Drive), o el Excel de la plantilla sugerida de arriba. Si la receta ya existe se actualiza; si es nueva se agrega. Los datos de menú, mermas, proveedores y plantillas se guardan automáticamente en el navegador.
     </p>
     <div class="form-row" style="background: var(--fondo); padding: 20px; border-radius: var(--radio); border: 2px dashed var(--borde); justify-content: center; flex-direction: column; align-items: center; gap: 10px; text-align: center;">
       <input type="file" id="fileRecetas" accept=".csv,.txt,.xlsx,.xls,.zip" style="display:none" onchange="procesarArchivoRecetas(this)">
@@ -425,7 +433,7 @@ tr:hover td{background:var(--fondo)}
       <span>📋 Gestión de recetas <span id="rec-contador" style="font-size:11px;font-weight:400;color:var(--gris)"></span></span>
       <button class="btn btn-s" style="font-size:11px;padding:4px 10px" title="Descargar todas las recetas visibles con sus ingredientes y cantidades" onclick="exportarRecetarioXLSX()">↓ Descargar Excel</button>
     </div>
-    <p style="font-size:11.5px;color:var(--gris);margin-bottom:10px;margin-top:-6px">Tocá una receta para ver sus ingredientes y cantidades, o descargalas en Excel — todas juntas o una por una.</p>
+    <p style="font-size:11.5px;color:var(--gris);margin-bottom:10px;margin-top:-6px">Tocá una receta para ver sus ingredientes y cantidades, o descargalas en Excel — todas juntas o una por una. Para borrar recetas necesitás estar en modo admin.</p>
     <div class="form-row" style="margin-bottom:10px;gap:8px">
       <div class="form-col grow">
         <input type="text" id="rec-buscar" placeholder="Buscar receta por nombre..." oninput="renderGestorRecetas()" style="width:100%">
@@ -440,6 +448,13 @@ tr:hover td{background:var(--fondo)}
           <option value="PO">PO — Postre</option>
         </select>
       </div>
+    </div>
+    <div class="form-row" style="margin-bottom:8px;gap:10px;align-items:center;justify-content:space-between">
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--texto);text-transform:none;letter-spacing:normal;font-weight:400;cursor:pointer">
+        <input type="checkbox" id="rec-check-todos" onclick="toggleSeleccionarTodasVisibles(this.checked)" style="width:15px;height:15px;cursor:pointer">
+        Seleccionar todas las visibles
+      </label>
+      <button class="btn btn-s" id="btn-eliminar-seleccionadas" style="font-size:11px;padding:4px 10px;color:var(--rojo);border-color:#fca5a5" onclick="eliminarSeleccionadas()">🗑 Borrar seleccionadas (0)</button>
     </div>
     <div id="rec-lista" style="max-height:380px;overflow-y:auto;border:1px solid var(--borde);border-radius:var(--radio)">
       <div class="empty">Cargando recetas...</div>
@@ -491,7 +506,7 @@ function saCambiarSede(id){
 
 // Funciones consideradas "seguras" en modo lectura: navegación, filtros de vista y descargas.
 // No modifican datos guardados, así que quedan habilitadas aunque no se haya iniciado sesión de admin.
-const SA_RO_SAFE_RE = /^(goTab|setVista|setFiltro|exportXLSXPorDia|exportCronogramaXLSX|copiar|renderCronograma|renderGestorRecetas|filtrarC|closeDrop|saCambiarSede|toggleDetalleReceta|exportarRecetaXLSX|exportarRecetarioXLSX|toggleDiaMenu|toggleDetalleMenu|expandirTodoMenu|colapsarTodoMenu)\s*\(/;
+const SA_RO_SAFE_RE = /^(goTab|setVista|setFiltro|exportXLSXPorDia|exportCronogramaXLSX|copiar|renderCronograma|renderGestorRecetas|filtrarC|closeDrop|saCambiarSede|toggleDetalleReceta|exportarRecetaXLSX|exportarRecetarioXLSX|toggleDiaMenu|toggleDetalleMenu|expandirTodoMenu|colapsarTodoMenu|descargarPlantillaReceta)\s*\(/;
 
 // IDs de elementos que quedan habilitados en modo lectura aunque no coincidan con SA_RO_SAFE_RE.
 // La carga de recetas (CSV/ZIP) ahora también requiere clave de admin.
@@ -1034,6 +1049,27 @@ if (recetasGuardadas) {
   localStorage.setItem(SEDES[SA_SEDE].recetasKey, JSON.stringify(huboCorreccion ? Object.fromEntries(Object.entries(REC)) : recetasLimpias));
 }
 
+// --- APLICAR RECETAS BORRADAS POR EL USUARIO ---
+// Las recetas "de fábrica" viven escritas en el código (arriba), así que si sólo se
+// borraran de REC en memoria, volverían a aparecer al recargar la página. Por eso
+// guardamos una lista de nombres borrados (independiente de dónde vino la receta) y
+// la aplicamos acá, cada vez que se arma REC, para que el borrado sea definitivo.
+function obtenerRecetasEliminadas(){
+  try{ return JSON.parse(localStorage.getItem(SEDES[SA_SEDE].recetasKey+'_ELIMINADAS')||'[]'); }
+  catch(e){ return []; }
+}
+function guardarRecetasEliminadas(arr){
+  localStorage.setItem(SEDES[SA_SEDE].recetasKey+'_ELIMINADAS', JSON.stringify(arr));
+}
+(function aplicarRecetasEliminadas(){
+  const eliminadas = obtenerRecetasEliminadas();
+  if(!eliminadas.length) return;
+  const clavesEliminadas = new Set(eliminadas.map(n=>normKey(n)));
+  Object.keys(REC).forEach(nombre=>{
+    if(clavesEliminadas.has(normKey(nombre))) delete REC[nombre];
+  });
+})();
+
 const DIETAS={g:'General',l:'Liviano',lc:'Liv. c/carne',n:'Niño',a:'Adolescente',b1:'Bebé 1',b2:'Bebé 2',dbt:'DBT',bcb:'BCB',veg:'Vegetariano',cel:'Celíaco',ast:'Astringente',sl:'Súper liviano',ids4:'IDSSI 4',ids5:'IDSSI 5',ids6:'IDSSI 6',ids7:'IDSSI 7',exc:'Excepción'};
 
 // Mix base de sopa: ingredientes fijos de una bolsa de 5kg, rinde ~40 porciones.
@@ -1570,6 +1606,21 @@ function renderCronograma(){
       }).join('')}
     </div>`;
   }).join('');
+}
+
+// Botón "🔄 Actualizar / Recalcular" de la pestaña Proveedores: vuelve a dibujar la
+// lista de proveedores y recalcula el cronograma de pedidos a partir del menú y los
+// proveedores actuales, y muestra un aviso — así queda claro que sí hizo algo (antes
+// el botón recalculaba en silencio y por eso no se notaba si había funcionado).
+function actualizarProveedoresYCronograma(){
+  try{
+    renderProveedores();
+    renderCronograma();
+    mostrarNotif('✓ Cronograma actualizado');
+  }catch(e){
+    console.error('Error al actualizar cronograma:', e);
+    mostrarNotif('⚠ No se pudo actualizar — revisá la consola', 'warn');
+  }
 }
 
 function exportCronogramaXLSX(){
@@ -2304,13 +2355,17 @@ function formatearLog(resultados) {
 
 
 // ─── GESTIÓN DE RECETAS ───
-// NOTA: por política del sistema NO se permite borrar recetas desde la interfaz
-// (ni una por una, ni en lote, ni el borrado masivo de "recetas importadas").
-// Sí se permite subir/actualizar recetas (ver procesarArchivoRecetas), incluso en modo lectura.
+// Borrar recetas SÍ está permitido, pero únicamente en modo admin (con clave). En modo
+// lectura los checkboxes y botones de borrado quedan deshabilitados automáticamente por
+// el control de acceso general (saBloquearElemento), así que estas funciones sólo se
+// ejecutan de verdad cuando SA_ES_ADMIN es true; igual se valida acá por las dudas.
 
 const REC_TIPOS_PILL = {PP:'pill-pp',GU:'pill-gu',EN:'pill-en',SO:'pill-so',PO:'pill-po'};
 const REC_TIPO_LABEL = {PP:'Plato',GU:'Guarnición',EN:'Entrada',SO:'Sopa',PO:'Postre'};
 let recListaActual = [];
+// Nombres de recetas tildadas para borrar (selección múltiple). Se guardan por nombre
+// (no por índice) para que la selección sobreviva a los cambios de filtro/búsqueda.
+let recetasSeleccionadas = new Set();
 
 function renderGestorRecetas() {
   const q = (document.getElementById('rec-buscar')?.value || '').toLowerCase().trim();
@@ -2323,10 +2378,13 @@ function renderGestorRecetas() {
   }).sort(([a],[b]) => a.localeCompare(b, 'es'));
 
   recListaActual = filtrados;
+  // Ya no tiene sentido mantener seleccionada una receta que se borró en otro lado
+  recetasSeleccionadas.forEach(n=>{ if(!REC[n]) recetasSeleccionadas.delete(n); });
 
   const el = document.getElementById('rec-lista');
   const contador = document.getElementById('rec-contador');
   if (contador) contador.textContent = `${filtrados.length} de ${todos.length} recetas`;
+  actualizarUISeleccionRecetas();
 
   if (!filtrados.length) {
     el.innerHTML = '<div class="empty">Sin recetas que coincidan</div>';
@@ -2335,10 +2393,13 @@ function renderGestorRecetas() {
 
   el.innerHTML = filtrados.map(([nombre, rec], idx) => {
     const pillClass = REC_TIPOS_PILL[rec.t] || 'pill-ot';
-    return `<div class="irow" style="grid-template-columns:1fr auto auto;gap:8px;align-items:center;cursor:pointer" onclick="toggleDetalleReceta(${idx})">
-      <span style="font-size:13px;font-weight:500">${nombre}</span>
-      <span class="pill ${pillClass}" style="font-size:10px">${REC_TIPO_LABEL[rec.t]||rec.t}</span>
-      <span style="font-size:11px;color:var(--gris);white-space:nowrap">${rec.i.length} ing. ▾</span>
+    const marcada = recetasSeleccionadas.has(nombre);
+    return `<div class="irow" style="grid-template-columns:auto 1fr auto auto auto;gap:8px;align-items:center">
+      <input type="checkbox" ${marcada?'checked':''} onclick="event.stopPropagation();toggleSeleccionReceta(${idx},this.checked)" style="width:15px;height:15px;cursor:pointer" title="Seleccionar para borrar">
+      <span style="font-size:13px;font-weight:500;cursor:pointer" onclick="toggleDetalleReceta(${idx})">${nombre}</span>
+      <span class="pill ${pillClass}" style="font-size:10px;cursor:pointer" onclick="toggleDetalleReceta(${idx})">${REC_TIPO_LABEL[rec.t]||rec.t}</span>
+      <span style="font-size:11px;color:var(--gris);white-space:nowrap;cursor:pointer" onclick="toggleDetalleReceta(${idx})">${rec.i.length} ing. ▾</span>
+      <button class="del" title="Borrar esta receta" onclick="event.stopPropagation();eliminarRecetaPorIndice(${idx})">×</button>
     </div>
     <div class="rec-detalle" id="rec-detalle-${idx}" style="display:none">
       ${rec.i.map(ing=>`<div class="rec-ing-row"><span>${ing.i}</span><span class="rec-ing-cant">${fmtNum(ing.c)} ${ing.u}</span></div>`).join('')}
@@ -2352,6 +2413,29 @@ function toggleDetalleReceta(idx){
   if(d) d.style.display = d.style.display==='none' ? 'block' : 'none';
 }
 
+function actualizarUISeleccionRecetas(){
+  const btn = document.getElementById('btn-eliminar-seleccionadas');
+  if(btn) btn.textContent = `🗑 Borrar seleccionadas (${recetasSeleccionadas.size})`;
+  const chkTodos = document.getElementById('rec-check-todos');
+  if(chkTodos){
+    chkTodos.checked = recListaActual.length>0 && recListaActual.every(([n])=>recetasSeleccionadas.has(n));
+  }
+}
+
+function toggleSeleccionReceta(idx, marcada){
+  const par = recListaActual[idx];
+  if(!par) return;
+  if(marcada) recetasSeleccionadas.add(par[0]); else recetasSeleccionadas.delete(par[0]);
+  actualizarUISeleccionRecetas();
+}
+
+function toggleSeleccionarTodasVisibles(marcada){
+  recListaActual.forEach(([nombre])=>{
+    if(marcada) recetasSeleccionadas.add(nombre); else recetasSeleccionadas.delete(nombre);
+  });
+  renderGestorRecetas();
+}
+
 function exportarRecetaXLSX(idx){
   const par = recListaActual[idx];
   if(!par) return;
@@ -2362,6 +2446,78 @@ function exportarRecetaXLSX(idx){
   XLSX.utils.book_append_sheet(wb, ws, 'Ingredientes');
   const nombreArchivo = nombre.toLowerCase().replace(/[^a-z0-9]+/gi,'_').replace(/^_+|_+$/g,'').slice(0,60);
   XLSX.writeFile(wb, `receta_${nombreArchivo}.xlsx`);
+}
+
+// Genera y descarga la plantilla de receta estandarizada (Excel, 3 hojas).
+// La hoja "Receta" es la que el sistema realmente lee al importar (nombre en la
+// primera fila, ingredientes en columnas Ingrediente/Presentación/Cantidad/Unidad);
+// las filas de encabezado y de datos sueltos (tipo, dieta, porciones) se ignoran al
+// importar porque no tienen cantidad numérica en la columna "Cantidad". Las hojas
+// "Procedimiento" y "Fotos" son sólo para documentar y no se leen al importar.
+function descargarPlantillaReceta(){
+  if (typeof XLSX === 'undefined') { mostrarNotif('No se pudo generar la plantilla — recargá la página e intentá de nuevo'); return; }
+
+  const wb = XLSX.utils.book_new();
+
+  // ── Hoja 1: RECETA (esta es la que importa el sistema) ──
+  const filasReceta = [
+    ['NOMBRE DE LA RECETA (completar acá, sin el tipo de dieta)'],
+    ['Tipo de plato (completar con PP, GU, EN, SO o PO):', 'PP=Plato principal · GU=Guarnición · EN=Entrada · SO=Sopa · PO=Postre'],
+    ['Dieta / variante:', 'Ej: General, Liviana, Astringente, Vegetariano, Celíaco, DBT, Súper liviano, etc.'],
+    ['Porciones que rinde esta receta tal cual está escrita abajo:', ''],
+    [],
+    ['Ingredientes', 'Presentación / aclaración', 'Cantidad', 'Unidad (g, kg, ml, l, unidad)'],
+    ['', '', '', ''],
+    ['', '', '', ''],
+    ['', '', '', ''],
+    ['', '', '', ''],
+    ['', '', '', ''],
+    ['', '', '', ''],
+    ['', '', '', ''],
+    ['', '', '', ''],
+    ['', '', '', ''],
+    ['', '', '', ''],
+    ['', '', '', ''],
+    ['', '', '', ''],
+  ];
+  const ws1 = XLSX.utils.aoa_to_sheet(filasReceta);
+  ws1['!cols'] = [{wch:34},{wch:30},{wch:12},{wch:14}];
+  XLSX.utils.book_append_sheet(wb, ws1, 'Receta');
+
+  // ── Hoja 2: PROCEDIMIENTO ──
+  const filasProc = [
+    ['PROCEDIMIENTO — escribí acá los pasos de preparación con todas las letras.'],
+    [],
+    ['Paso 1:'], [''],
+    ['Paso 2:'], [''],
+    ['Paso 3:'], [''],
+    ['Paso 4:'], [''],
+    ['Paso 5:'], [''],
+    ['Paso 6:'], [''],
+    [],
+    ['Observaciones / puntos críticos de higiene o cocción:'], [''], [''],
+  ];
+  const ws2 = XLSX.utils.aoa_to_sheet(filasProc);
+  ws2['!cols'] = [{wch:95}];
+  XLSX.utils.book_append_sheet(wb, ws2, 'Procedimiento');
+
+  // ── Hoja 3: FOTOS ──
+  const filaAncha = new Array(10).fill('');
+  const filasFotos = [
+    ['FOTOS — pegá acá 1 o 2 fotos del plato terminado (copiá la imagen y pegala directamente sobre esta hoja, cerca del texto de abajo).'],
+    [],
+    ['📷 Foto 1 (plato terminado, tal cual sale al paciente):'],
+    filaAncha, filaAncha, filaAncha, filaAncha, filaAncha, filaAncha, filaAncha, filaAncha,
+    [],
+    ['📷 Foto 2 (detalle / armado — opcional):'],
+    filaAncha, filaAncha, filaAncha, filaAncha, filaAncha, filaAncha, filaAncha, filaAncha,
+  ];
+  const ws3 = XLSX.utils.aoa_to_sheet(filasFotos);
+  ws3['!cols'] = new Array(10).fill({wch:11});
+  XLSX.utils.book_append_sheet(wb, ws3, 'Fotos');
+
+  XLSX.writeFile(wb, 'plantilla_receta_sanatorio_allende.xlsx');
+  mostrarNotif('✓ Plantilla de receta descargada');
 }
 
 function exportarRecetarioXLSX(){
@@ -2380,13 +2536,49 @@ function exportarRecetarioXLSX(){
   mostrarNotif(`✓ Descargado (${recListaActual.length} recetas)`);
 }
 
-// Se mantienen como no-operativas (defensivas) por si quedara alguna referencia residual:
-// el borrado de recetas está deshabilitado en toda la aplicación.
-function eliminarReceta(){
-  mostrarNotif('🔒 No está permitido eliminar recetas.');
+// Borra UNA receta (por nombre). El borrado es definitivo: se saca de REC en memoria,
+// se guarda en la lista de "recetas eliminadas" (para que no reaparezca al recargar,
+// aunque sea una receta de fábrica escrita en el código) y se persiste todo en el
+// navegador. Si el plato ya estaba usado en el menú actual, sus ingredientes cargados
+// no se tocan retroactivamente (el menú ya armado sigue funcionando).
+function eliminarReceta(nombre){
+  if(!SA_ES_ADMIN){ mostrarNotif('🔒 Necesitás modo admin para borrar recetas'); return; }
+  if(!nombre || !REC[nombre]) return;
+  if(!confirm(`¿Borrar la receta "${nombre}"? Esta acción no se puede deshacer.`)) return;
+  delete REC[nombre];
+  const elim = obtenerRecetasEliminadas();
+  if(!elim.some(n=>normKey(n)===normKey(nombre))) elim.push(nombre);
+  guardarRecetasEliminadas(elim);
+  persistirRecetasExt();
+  recetasSeleccionadas.delete(nombre);
+  renderGestorRecetas();
+  mostrarNotif(`🗑 Receta "${nombre}" borrada`);
 }
+
+// Igual que eliminarReceta, pero recibiendo el índice dentro de recListaActual
+// (así los botones de la lista no dependen de escapar nombres con tildes/comillas).
+function eliminarRecetaPorIndice(idx){
+  const par = recListaActual[idx];
+  if(!par) return;
+  eliminarReceta(par[0]);
+}
+
+// Borra en lote todas las recetas tildadas con los checkboxes.
 function eliminarSeleccionadas(){
-  mostrarNotif('🔒 No está permitido eliminar recetas.');
+  if(!SA_ES_ADMIN){ mostrarNotif('🔒 Necesitás modo admin para borrar recetas'); return; }
+  const nombres = [...recetasSeleccionadas].filter(n=>REC[n]);
+  if(!nombres.length){ mostrarNotif('No seleccionaste ninguna receta'); return; }
+  if(!confirm(`¿Borrar ${nombres.length} receta${nombres.length>1?'s':''} seleccionada${nombres.length>1?'s':''}? Esta acción no se puede deshacer.`)) return;
+  const elim = obtenerRecetasEliminadas();
+  nombres.forEach(nombre=>{
+    delete REC[nombre];
+    if(!elim.some(n=>normKey(n)===normKey(nombre))) elim.push(nombre);
+  });
+  guardarRecetasEliminadas(elim);
+  persistirRecetasExt();
+  recetasSeleccionadas.clear();
+  renderGestorRecetas();
+  mostrarNotif(`🗑 ${nombres.length} receta${nombres.length>1?'s':''} borrada${nombres.length>1?'s':''}`);
 }
 // ════════════════════════════════════════════
 // CARGA DE CUADRO MACRO DESDE .DOCX
