@@ -1428,7 +1428,7 @@ function calcTotalesPorDia(){
     (it.ingredientes||[]).forEach(ing=>{
       if(tieneSopa && esIngredienteDeSopa(it,ing)) return;
       const cat=getUCat(ing.u);
-      const key=ing.i.toLowerCase().trim()+'|||'+cat;
+      const key=normKey(ing.i)+'|||'+cat;
       if(!totDia[key]) totDia[key]={nombre:ing.i,cat,u:ing.u,cant:0,esSopa:false};
       totDia[key].cant += ing.c*it.porciones;
     });
@@ -1441,7 +1441,7 @@ function calcTotalesPorDia(){
       const factor=porcionesSopa/SOPA_PORCIONES_POR_BOLSA;
       SOPA_MIX_BASE.forEach(ing=>{
         const cat=getUCat(ing.u);
-        const key=ing.i.toLowerCase().trim()+'|||'+cat;
+        const key=normKey(ing.i)+'|||'+cat;
         if(!totDia[key]) totDia[key]={nombre:ing.i,cat,u:ing.u,cant:0,esSopa:false};
         totDia[key].cant += ing.c*factor;
         totDia[key].esSopa=true;
@@ -1611,6 +1611,19 @@ function exportCronogramaXLSX(){
 }
 
 // ─── CÁLCULO ───
+
+// Normaliza nombres (de recetas o ingredientes) para poder COMPARARLOS de forma robusta:
+// ignora mayúsculas/minúsculas, tildes/acentos y espacios de más. Se usa solo para detectar
+// coincidencias (¿es la misma receta/ingrediente aunque esté escrito distinto?) — el nombre
+// que se MUESTRA al usuario nunca se toca, se sigue usando tal cual está cargado.
+function normKey(s){
+  return (s||'')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'') // quita tildes/acentos
+    .toLowerCase()
+    .replace(/\s+/g,' ')
+    .trim();
+}
+
 function getMerma(n){const nl=n.toLowerCase();for(const[k,v] of Object.entries(mermas)){if(nl.includes(k))return v/100;}return 0;}
 
 // CORRECCIÓN CLAVE: Agregamos el segundo parámetro para detectar si es sopa por el nombre del ingrediente
@@ -1627,7 +1640,7 @@ function getUCat(u){
 function esIngredienteDeSopa(it, ing){
   return (it.recetas||[]).some(r=>{
     if(REC[r] && REC[r].t==='SO'){
-      return REC[r].i.some(ingRec => ingRec.i.toLowerCase() === ing.i.toLowerCase());
+      return REC[r].i.some(ingRec => normKey(ingRec.i) === normKey(ing.i));
     }
     return false;
   });
@@ -1642,10 +1655,10 @@ function esIngredienteDeSopa(it, ing){
 // todavía tiene ese ingrediente exacto — así igual se puede ubicar dónde corregirlo.
 function origenReceta(it, ing){
   if(ing.receta) return [ing.receta];
-  const nom=ing.i.toLowerCase().trim();
-  const enCombo = (it.recetas||[]).filter(r => REC[r] && REC[r].i.some(x => x.i.toLowerCase().trim()===nom));
+  const nom=normKey(ing.i);
+  const enCombo = (it.recetas||[]).filter(r => REC[r] && REC[r].i.some(x => normKey(x.i)===nom));
   if(enCombo.length) return enCombo;
-  return Object.keys(REC).filter(r => REC[r].i.some(x => x.i.toLowerCase().trim()===nom));
+  return Object.keys(REC).filter(r => REC[r].i.some(x => normKey(x.i)===nom));
 }
 
 function calcTotales(){
@@ -1666,7 +1679,7 @@ function calcTotales(){
         // Verificar si es un ingrediente de sopa (comparar con recetas SO)
         const esDelRecetaSopa = (it.recetas||[]).some(r=>{
           if(REC[r] && REC[r].t==='SO') {
-            return REC[r].i.some(ingRec => ingRec.i.toLowerCase() === ing.i.toLowerCase());
+            return REC[r].i.some(ingRec => normKey(ingRec.i) === normKey(ing.i));
           }
           return false;
         });
@@ -1674,7 +1687,7 @@ function calcTotales(){
       }
       
       const cat=getUCat(ing.u);
-      const key=ing.i.toLowerCase().trim()+'|||'+cat;
+      const key=normKey(ing.i)+'|||'+cat;
       if(!tot[key]) tot[key]={nombre:ing.i,cat,u:ing.u,cant:0,esSopa:false,recetasOrigen:new Set()};
       tot[key].cant += ing.c * it.porciones;
       origenReceta(it,ing).forEach(r=>tot[key].recetasOrigen.add(r));
@@ -1686,7 +1699,7 @@ function calcTotales(){
     const bolsas=porcionesTotalSopa/SOPA_PORCIONES_POR_BOLSA;
     SOPA_MIX_BASE.forEach(ing=>{
       const cat=getUCat(ing.u);
-      const key=ing.i.toLowerCase().trim()+'|||'+cat;
+      const key=normKey(ing.i)+'|||'+cat;
       if(!tot[key]) tot[key]={nombre:ing.i,cat,u:ing.u,cant:0,esSopa:false,recetasOrigen:new Set()};
       tot[key].cant += ing.c*bolsas;
       tot[key].esSopa=true;
@@ -1795,7 +1808,7 @@ function renderPedido(){
           // Saltar los ingredientes propios de la receta de sopa (se reemplazan por el mix base)
           if(tieneSopa && esIngredienteDeSopa(it, ing)) return;
           const cat=getUCat(ing.u);
-          const key=ing.i.toLowerCase().trim()+'|||'+cat;
+          const key=normKey(ing.i)+'|||'+cat;
           if(!totDia[key]) totDia[key]={nombre:ing.i,cat,u:ing.u,cant:0,esSopa:false,recetasOrigen:new Set()};
           totDia[key].cant += ing.c * it.porciones;
           origenReceta(it,ing).forEach(r=>totDia[key].recetasOrigen.add(r));
@@ -1808,7 +1821,7 @@ function renderPedido(){
         const factor=porcionesSopaDia/SOPA_PORCIONES_POR_BOLSA;
         SOPA_MIX_BASE.forEach(ing=>{
           const cat=getUCat(ing.u);
-          const key=ing.i.toLowerCase().trim()+'|||'+cat;
+          const key=normKey(ing.i)+'|||'+cat;
           if(!totDia[key]) totDia[key]={nombre:ing.i,cat,u:ing.u,cant:0,esSopa:false,recetasOrigen:new Set()};
           totDia[key].cant += ing.c*factor;
           totDia[key].esSopa=true;
@@ -1884,7 +1897,7 @@ function exportXLSXPorDia(){
       (it.ingredientes||[]).forEach(ing=>{
         if(tieneSopa && esIngredienteDeSopa(it, ing)) return;
         const cat=getUCat(ing.u);
-        const key=ing.i.toLowerCase().trim()+'|||'+cat;
+        const key=normKey(ing.i)+'|||'+cat;
         if(!totDia[key]) totDia[key]={nombre:ing.i,cat,u:ing.u,cant:0,esSopa:false,recetasOrigen:new Set()};
         totDia[key].cant += ing.c * it.porciones;
         origenReceta(it,ing).forEach(r=>totDia[key].recetasOrigen.add(r));
@@ -1896,7 +1909,7 @@ function exportXLSXPorDia(){
       const factor=porcionesSopaDia/SOPA_PORCIONES_POR_BOLSA;
       SOPA_MIX_BASE.forEach(ing=>{
         const cat=getUCat(ing.u);
-        const key=ing.i.toLowerCase().trim()+'|||'+cat;
+        const key=normKey(ing.i)+'|||'+cat;
         if(!totDia[key]) totDia[key]={nombre:ing.i,cat,u:ing.u,cant:0,esSopa:false,recetasOrigen:new Set()};
         totDia[key].cant += ing.c*factor;
         totDia[key].esSopa=true;
@@ -2164,9 +2177,14 @@ function analizarYGuardarReceta(texto, fileName) {
   if (!nombreReceta) {
     nombreReceta = fileName.replace(/\.[^/.]+$/, "").split('_')[0].trim();
   }
-  // Capitalizar: primera letra mayúscula, resto minúsculas
-  nombreReceta = nombreReceta.replace(/^["'\s]+|["'\s]+$/g, '').trim();
+  // Capitalizar: primera letra mayúscula, resto minúsculas, y colapsar espacios de más
+  nombreReceta = nombreReceta.replace(/^["'\s]+|["'\s]+$/g, '').replace(/\s+/g, ' ').trim();
   nombreReceta = nombreReceta.charAt(0).toUpperCase() + nombreReceta.slice(1).toLowerCase();
+
+  // Mapa para detectar, DENTRO de la misma receta, si un ingrediente aparece repetido
+  // (aunque esté escrito con mayúsculas/tildes/espacios distintos) y sumar sus cantidades
+  // en vez de dejarlo como dos filas separadas.
+  const mapaIngredientes = new Map();
 
   for (let i = 1; i < lineas.length; i++) {
     let linea = lineas[i].trim();
@@ -2180,23 +2198,40 @@ function analizarYGuardarReceta(texto, fileName) {
     if (ing && cantStr) {
       let cantNum = cantStr.toLowerCase() === 'c/n' ? 0.1 : parseFloat(cantStr.replace(',', '.'));
       if (!isNaN(cantNum)) {
-        ingredientes.push({
-          i: ing.charAt(0).toUpperCase() + ing.slice(1).toLowerCase(),
-          c: cantNum,
-          u: med.toLowerCase() === 'c/n' ? 'u' : med
-        });
+        ing = ing.replace(/\s+/g, ' ').trim();
+        const unidadFinal = med.toLowerCase() === 'c/n' ? 'u' : med;
+        const claveIng = normKey(ing) + '|||' + getUCat(unidadFinal);
+        if (mapaIngredientes.has(claveIng)) {
+          mapaIngredientes.get(claveIng).c += cantNum;
+        } else {
+          mapaIngredientes.set(claveIng, {
+            i: ing.charAt(0).toUpperCase() + ing.slice(1).toLowerCase(),
+            c: cantNum,
+            u: unidadFinal
+          });
+        }
       }
     }
   }
+  ingredientes = [...mapaIngredientes.values()];
 
   if (nombreReceta && ingredientes.length > 0) {
-    const existente = REC[nombreReceta];
+    // Buscamos si esta receta YA existe en el recetario, comparando de forma robusta
+    // (ignorando mayúsculas, tildes y espacios de más). Así, si el archivo viene con
+    // el nombre escrito un poco distinto al que ya está cargado (p.ej. al re-subir
+    // toda la carpeta de Drive), lo reconocemos igual y actualizamos esa receta
+    // en vez de crear una nueva duplicada con otro nombre.
+    const claveExistente = Object.keys(REC).find(k => normKey(k) === normKey(nombreReceta));
+    const existente = claveExistente ? REC[claveExistente] : null;
     const esNueva = !existente;
+    // Conservamos la clave (nombre) original si ya existía, para que los platos del menú
+    // que ya referencian esa receta sigan apuntando correctamente a ella.
+    const claveFinal = claveExistente || nombreReceta;
     // Si la receta ya existía, conservamos su tipo/categoría actual (no la pisamos con "Plato").
     // Si es nueva, intentamos detectar el tipo por el nombre; si no se puede inferir, usamos "PP" (Plato) por defecto.
     const tipo = existente ? existente.t : detectarTipoReceta(nombreReceta);
-    REC[nombreReceta] = { t: tipo, i: ingredientes };
-    return { ok: true, nombre: nombreReceta, cantidad: ingredientes.length, nueva: esNueva };
+    REC[claveFinal] = { t: tipo, i: ingredientes };
+    return { ok: true, nombre: claveFinal, cantidad: ingredientes.length, nueva: esNueva };
   } else {
     return { ok: false, nombre: fileName };
   }
@@ -2225,7 +2260,7 @@ function resincronizarMenuConRecetas(nombresActualizados) {
     if (!it.recetas || !it.recetas.some(r => nombresActualizados.includes(r))) return;
     const nuevosIngredientes = [];
     it.recetas.forEach(r => {
-      if (REC[r]) REC[r].i.forEach(ing => nuevosIngredientes.push({ ...ing }));
+      if (REC[r]) REC[r].i.forEach(ing => nuevosIngredientes.push({ ...ing, receta: r }));
     });
     it.ingredientes = nuevosIngredientes;
     platosActualizados++;
