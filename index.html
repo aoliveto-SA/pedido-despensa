@@ -2031,7 +2031,9 @@ function exportXLSXPorDia(){
 
 // ─── Navegador rápido de días ───
 function normDiaId(s){
-  return s.normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,'-');
+  var map={'á':'a','é':'e','í':'i','ó':'o','ú':'u','Á':'A','É':'E','Í':'I','Ó':'O','Ú':'U',
+           'ü':'u','Ü':'U','ñ':'n','Ñ':'N'};
+  return s.split('').map(function(ch){return map[ch]||ch;}).join('').replace(/\s+/g,'-');
 }
 function renderDiaNave(){
   const nav=document.getElementById('diaNave');
