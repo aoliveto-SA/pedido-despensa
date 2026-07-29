@@ -2056,15 +2056,20 @@ function renderDiaNave(){
     const dia=parts[0], srv=parts[1];
     // Mismo cálculo de ID que en dia-sec: split por ' · ', tomar cada parte
     const id='ds-'+normDiaId(dia)+'-'+srv;
-    const lbl=(ABR[dia]||dia.slice(0,3))+' '+(srv==='Almuerzo'?'A':'C');
-    return `<button class="dia-nav-btn" data-dsid="${id}" onclick="scrollToDia('${id}')">${lbl}</button>`;
+    return `<button class="dia-nav-btn" data-dsid="${id}" onclick="scrollToDia('${id}')">${dia}</button>`;
   };
   const almuerzos=sorted.filter(g=>g.split(' · ')[1]==='Almuerzo');
   const cenas=sorted.filter(g=>g.split(' · ')[1]==='Cena');
-  let htmlNav='<span class="dia-nav-label">IR A →</span>'+almuerzos.map(btnHtml).join('');
+  let htmlNav='';
+  if(almuerzos.length){
+    htmlNav+='<span class="dia-nav-label">☀️ Almuerzo →</span>'+almuerzos.map(btnHtml).join('');
+  }
   if(cenas.length){
-    // Elemento de ancho completo: fuerza que la fila de cenas arranque en el renglón de abajo
-    htmlNav+='<span style="flex-basis:100%;width:100%;height:0"></span>'+cenas.map(btnHtml).join('');
+    if(almuerzos.length){
+      // Elemento de ancho completo: fuerza que la fila de cenas arranque en el renglón de abajo
+      htmlNav+='<span style="flex-basis:100%;width:100%;height:0"></span>';
+    }
+    htmlNav+='<span class="dia-nav-label">🌙 Cena →</span>'+cenas.map(btnHtml).join('');
   }
   nav.innerHTML=htmlNav;
   nav.classList.add('vis');
