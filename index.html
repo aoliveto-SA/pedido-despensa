@@ -504,6 +504,15 @@ tr:hover td{background:var(--fondo)}
 <button id="btnSubir" class="btn-subir" onclick="scrollToTop()" title="Volver arriba" aria-label="Volver arriba">↑</button>
 
 <script>
+// Botón flotante "Volver arriba": se registra primero que nada, antes de cualquier
+// código que pueda fallar (p. ej. Firebase), para que siempre funcione sin importar
+// qué pase más abajo en el script.
+window.addEventListener('scroll',()=>{
+  const btn=document.getElementById('btnSubir');
+  if(!btn) return;
+  if(window.scrollY>350) btn.classList.add('vis'); else btn.classList.remove('vis');
+});
+
 // ════════════════════════════════════════════
 // CONTROL DE ACCESO — MODO LECTURA / ADMIN
 // ════════════════════════════════════════════
@@ -2118,11 +2127,6 @@ function scrollToCronDia(id){
 function scrollToTop(){
   window.scrollTo({top:0,behavior:'smooth'});
 }
-window.addEventListener('scroll',()=>{
-  const btn=document.getElementById('btnSubir');
-  if(!btn) return;
-  if(window.scrollY>350) btn.classList.add('vis'); else btn.classList.remove('vis');
-});
 
 function goTab(t){
   const tabs=['menu','plantillas','pedido','proveedores','mermas','cargar-recetas'];
