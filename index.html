@@ -160,6 +160,16 @@ tr:hover td{background:var(--fondo)}
   font-weight:500;white-space:nowrap;transition:.15s}
 .dia-nav-btn:hover{background:var(--azul-claro);color:var(--azul-txt);border-color:#93c5fd}
 .dia-nav-btn.activo{background:var(--azul);color:#fff;border-color:var(--azul)}
+
+/* ─── Botón flotante "Volver arriba" ─── */
+.btn-subir{
+  position:fixed;bottom:20px;right:20px;width:46px;height:46px;border-radius:50%;
+  background:var(--azul);color:#fff;border:none;font-size:20px;font-weight:700;
+  cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.28);
+  display:none;align-items:center;justify-content:center;z-index:900;transition:.15s;
+}
+.btn-subir:hover{background:#2c689f}
+.btn-subir.vis{display:flex}
 </style>
 </head>
 <body>
@@ -491,6 +501,8 @@ tr:hover td{background:var(--fondo)}
   </div>
 </div>
 
+<button id="btnSubir" class="btn-subir" onclick="scrollToTop()" title="Volver arriba" aria-label="Volver arriba">↑</button>
+
 <script>
 // ════════════════════════════════════════════
 // CONTROL DE ACCESO — MODO LECTURA / ADMIN
@@ -519,7 +531,7 @@ function saCambiarSede(id){
 
 // Funciones consideradas "seguras" en modo lectura: navegación, filtros de vista y descargas.
 // No modifican datos guardados, así que quedan habilitadas aunque no se haya iniciado sesión de admin.
-const SA_RO_SAFE_RE = /^(goTab|setVista|setFiltro|exportXLSXPorDia|exportCronogramaXLSX|copiar|renderCronograma|renderGestorRecetas|filtrarC|closeDrop|saCambiarSede|toggleDetalleReceta|exportarRecetaXLSX|exportarRecetarioXLSX|toggleDiaMenu|toggleDetalleMenu|expandirTodoMenu|colapsarTodoMenu|descargarPlantillaReceta|scrollToDia)\s*\(/;
+const SA_RO_SAFE_RE = /^(goTab|setVista|setFiltro|exportXLSXPorDia|exportCronogramaXLSX|copiar|renderCronograma|renderGestorRecetas|filtrarC|closeDrop|saCambiarSede|toggleDetalleReceta|exportarRecetaXLSX|exportarRecetarioXLSX|toggleDiaMenu|toggleDetalleMenu|expandirTodoMenu|colapsarTodoMenu|descargarPlantillaReceta|scrollToDia|scrollToTop)\s*\(/;
 
 // IDs de elementos que quedan habilitados en modo lectura aunque no coincidan con SA_RO_SAFE_RE.
 // La carga de recetas (CSV/ZIP) ahora también requiere clave de admin.
@@ -2101,6 +2113,16 @@ function scrollToCronDia(id){
   if(!el) return;
   el.scrollIntoView({behavior:'smooth',block:'start'});
 }
+
+// Botón flotante "Volver arriba": aparece al bajar bastante en cualquier pestaña
+function scrollToTop(){
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+window.addEventListener('scroll',()=>{
+  const btn=document.getElementById('btnSubir');
+  if(!btn) return;
+  if(window.scrollY>350) btn.classList.add('vis'); else btn.classList.remove('vis');
+});
 
 function goTab(t){
   const tabs=['menu','plantillas','pedido','proveedores','mermas','cargar-recetas'];
