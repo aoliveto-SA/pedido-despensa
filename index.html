@@ -149,6 +149,17 @@ tr:hover td{background:var(--fondo)}
 .sa-modal-btns{display:flex;gap:8px}
 .sa-modal-btns button{flex:1;padding:9px;font-size:13px;border-radius:8px;border:1px solid var(--borde);background:var(--blanco);cursor:pointer;font-family:inherit}
 .sa-modal-btns button.sa-primary{background:var(--azul);border-color:var(--azul);color:#fff;font-weight:600}
+
+/* ─── Navegador rápido de días ─── */
+.dia-nav{display:none;gap:6px;flex-wrap:wrap;margin-bottom:12px;padding:10px 14px;
+  background:var(--blanco);border:1px solid var(--borde);border-radius:var(--radio);align-items:center}
+.dia-nav.vis{display:flex}
+.dia-nav-label{font-size:11px;color:var(--gris);font-weight:600;white-space:nowrap;margin-right:4px}
+.dia-nav-btn{font-size:12px;padding:5px 12px;border-radius:10px;cursor:pointer;
+  border:1px solid var(--borde);background:none;color:var(--gris);font-family:inherit;
+  font-weight:500;white-space:nowrap;transition:.15s}
+.dia-nav-btn:hover{background:var(--azul-claro);color:var(--azul-txt);border-color:#93c5fd}
+.dia-nav-btn.activo{background:var(--azul);color:#fff;border-color:var(--azul)}
 </style>
 </head>
 <body>
@@ -313,6 +324,7 @@ tr:hover td{background:var(--fondo)}
     <button class="chip on" data-u="todo" onclick="setFiltro(this)">Todos</button>
     <button class="chip" data-u="s" onclick="setFiltro(this)">🍲 Sopas</button>
   </div>
+  <div class="dia-nav" id="diaNave"></div>
   <div id="resultado"><div class="empty">Armá el menú en el paso 1</div></div>
 </div>
 
@@ -1783,7 +1795,14 @@ function fmtNum(n){
 
 // ─── PEDIDO ───
 function setFiltro(btn){filtroU=btn.dataset.u;document.querySelectorAll('#filtroU .chip').forEach(b=>b.classList.remove('on'));btn.classList.add('on');renderPedido();}
-function setVista(btn){vista=btn.dataset.v;document.querySelectorAll('#vistaChips .chip').forEach(b=>b.classList.remove('on'));btn.classList.add('on');renderPedido();}
+function setVista(btn){
+  vista=btn.dataset.v;
+  document.querySelectorAll('#vistaChips .chip').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  renderPedido();
+  if(vista==='pordia') renderDiaNave();
+  else{const nav=document.getElementById('diaNave');if(nav){nav.classList.remove('vis');nav.innerHTML='';}}
+}
 function renderPedido(){
   const tots=calcTotales();
   const tp=items.reduce((s,i)=>s+i.porciones,0);
@@ -1890,7 +1909,8 @@ function renderPedido(){
         const sopasDia = visDia.filter(r => r.esSopa);
         const otrosDia = visDia.filter(r => !r.esSopa);
 
-        html += `<div class="dia-sec" style="margin-top:20px;"><div class="dia-title" style="font-size:14px;font-weight:bold;color:var(--texto);border-bottom:3px solid var(--gris);">📅 ${dia}</div>`;
+        const _dsid='ds-'+normDiaId(dia.split(' · ')[0])+'-'+dia.split(' · ')[1];
+        html += `<div class="dia-sec" id="${_dsid}" style="margin-top:20px;scroll-margin-top:80px"><div class="dia-title" style="font-size:14px;font-weight:bold;color:var(--texto);border-bottom:3px solid var(--gris);">📅 ${dia}</div>`;
         if(bolsasDia > 0) {
           html += `<div style="margin:10px 0;padding:10px 14px;background:#eff6ff;border:1px solid var(--azul);border-radius:8px;font-size:15px;font-weight:bold;color:var(--azul-txt)">🍲 Mix de sopa: ${bolsasDia} ${bolsasDia===1?'bolsa':'bolsas'} (5kg c/u)</div>`;
         }
@@ -1901,6 +1921,7 @@ function renderPedido(){
       }
     }
     document.getElementById('resultado').innerHTML=html||'<div class="empty">Sin datos</div>';
+    renderDiaNave();
   }
 }
 
@@ -2007,6 +2028,42 @@ function exportXLSXPorDia(){
 }
 
 // ─── TABS ───
+
+// ─── Navegador rápido de días ───
+function normDiaId(s){
+  return s.normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,'-');
+}
+function renderDiaNave(){
+  const nav=document.getElementById('diaNave');
+  if(!nav) return;
+  if(vista!=='pordia'||!items.length){nav.classList.remove('vis');nav.innerHTML='';return;}
+  const ORD=['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+  const ABR={Lunes:'Lun',Martes:'Mar','Miércoles':'Mié',Jueves:'Jue',Viernes:'Vie',Sábado:'Sáb',Domingo:'Dom'};
+  const grupos=new Set();
+  items.forEach(it=>grupos.add(it.dia+'|'+it.srv));
+  const sorted=[...grupos].sort((a,b)=>{
+    const[da,sa]=a.split('|'),[db,sb]=b.split('|');
+    const d=ORD.indexOf(da)-ORD.indexOf(db);
+    return d||(sa==='Almuerzo'?0:1)-(sb==='Almuerzo'?0:1);
+  });
+  nav.innerHTML='<span class="dia-nav-label">IR A →</span>'+sorted.map(g=>{
+    const[dia,srv]=g.split('|');
+    const id='ds-'+normDiaId(dia)+'-'+srv;
+    const lbl=(ABR[dia]||dia.slice(0,3))+' '+(srv==='Almuerzo'?'A':'C');
+    return `<button class="dia-nav-btn" data-dsid="${id}" onclick="scrollToDia('${id}')">${lbl}</button>`;
+  }).join('');
+  nav.classList.add('vis');
+}
+function scrollToDia(id){
+  const el=document.getElementById(id);
+  if(!el) return;
+  document.querySelectorAll('.dia-nav-btn').forEach(b=>b.classList.remove('activo'));
+  const btn=document.querySelector(`.dia-nav-btn[data-dsid="${id}"]`);
+  if(btn) btn.classList.add('activo');
+  el.scrollIntoView({behavior:'smooth',block:'start'});
+  setTimeout(()=>document.querySelectorAll('.dia-nav-btn').forEach(b=>b.classList.remove('activo')),1500);
+}
+
 function goTab(t){
   const tabs=['menu','plantillas','pedido','proveedores','mermas','cargar-recetas'];
   document.querySelectorAll('.tab').forEach((b,i)=>b.className='tab'+(tabs[i]===t?' on':''));
@@ -2017,6 +2074,8 @@ function goTab(t){
   if(t==='mermas')renderMermas();
   if(t==='plantillas')renderPlantillas();
   if(t==='cargar-recetas')renderGestorRecetas();
+  // Ocultar nav si salís de pedido
+  if(t!=='pedido'){const nav=document.getElementById('diaNave');if(nav){nav.classList.remove('vis');nav.innerHTML='';}}
 }
 
 iniciarSync();
