@@ -364,6 +364,7 @@ tr:hover td{background:var(--fondo)}
     </p>
     <div class="form-row" style="align-items:flex-end">
       <div class="form-col"><label>Semana de referencia (lunes)</label><input type="date" id="semanaInicioInput" style="width:160px" onchange="cambiarSemanaInicio(this.value)"></div>
+      <div class="form-col"><label>Ir a día</label><select id="cronDiaSelect" style="width:170px" onchange="scrollToCronDia(this.value)"><option value="">Elegir día...</option></select></div>
       <button class="btn btn-s" onclick="actualizarProveedoresYCronograma()" style="font-size:12px">🔄 Actualizar / Recalcular</button>
       <button class="btn btn-g" onclick="exportCronogramaXLSX()" style="font-size:12px">↓ Descargar planilla</button>
     </div>
@@ -1570,15 +1571,24 @@ function setCronOverride(key,campo,valor){
 function renderCronograma(){
   const si=document.getElementById('semanaInicioInput');
   if(si && !si.value) si.value=semanaInicio||mondayActual();
+  const selDia=document.getElementById('cronDiaSelect');
   const filas=calcCronograma();
   if(!filas.length){
     document.getElementById('cronograma').innerHTML='<div class="empty">Armá el menú en el paso 1 para generar el cronograma</div>';
+    if(selDia){ selDia.innerHTML='<option value="">Elegir día...</option>'; selDia.disabled=true; }
     return;
   }
   // Agrupar primero por día de uso (orden cronológico), y dentro de cada día, por rubro/proveedor
   const porDia={};
   filas.forEach(f=>{ if(!porDia[f.dia]) porDia[f.dia]=[]; porDia[f.dia].push(f); });
   const diasPresentes=DIAS_ORDEN.filter(d=>porDia[d]);
+
+  if(selDia){
+    selDia.disabled=false;
+    selDia.innerHTML='<option value="">Elegir día...</option>'+diasPresentes.map(dia=>
+      `<option value="cron-dia-${normDiaId(dia)}">${dia}</option>`
+    ).join('');
+  }
 
   document.getElementById('cronograma').innerHTML=diasPresentes.map(dia=>{
     const filasDia=porDia[dia];
@@ -1590,7 +1600,7 @@ function renderCronograma(){
       return a.localeCompare(b,'es');
     });
 
-    return `<div class="dia-sec" style="margin-bottom:22px">
+    return `<div class="dia-sec" id="cron-dia-${normDiaId(dia)}" style="margin-bottom:22px;scroll-margin-top:80px">
       <div class="dia-title" style="font-size:14px;font-weight:bold;color:var(--texto);border-bottom:3px solid var(--gris);padding-bottom:4px;margin-bottom:10px">📅 ${dia} · ${fmtFecha(fecha)}</div>
       ${rubros.map(rubro=>{
         const fs=porRubro[rubro];
@@ -2082,6 +2092,14 @@ function scrollToDia(id){
   if(btn) btn.classList.add('activo');
   el.scrollIntoView({behavior:'smooth',block:'start'});
   setTimeout(()=>document.querySelectorAll('.dia-nav-btn').forEach(b=>b.classList.remove('activo')),1500);
+}
+
+// Desplegable "Ir a día" del cronograma de pedidos (pestaña Proveedores)
+function scrollToCronDia(id){
+  if(!id) return;
+  const el=document.getElementById(id);
+  if(!el) return;
+  el.scrollIntoView({behavior:'smooth',block:'start'});
 }
 
 function goTab(t){
