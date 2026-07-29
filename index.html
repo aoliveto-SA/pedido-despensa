@@ -2039,15 +2039,19 @@ function renderDiaNave(){
   if(vista!=='pordia'||!items.length){nav.classList.remove('vis');nav.innerHTML='';return;}
   const ORD=['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
   const ABR={Lunes:'Lun',Martes:'Mar','Miércoles':'Mié',Jueves:'Jue',Viernes:'Vie',Sábado:'Sáb',Domingo:'Dom'};
+  // Usar el mismo formato que el loop: "Lunes · Almuerzo"
   const grupos=new Set();
-  items.forEach(it=>grupos.add(it.dia+'|'+it.srv));
+  items.forEach(it=>grupos.add(it.dia+' · '+it.srv));
   const sorted=[...grupos].sort((a,b)=>{
-    const[da,sa]=a.split('|'),[db,sb]=b.split('|');
+    const partsA=a.split(' · '), partsB=b.split(' · ');
+    const da=partsA[0], sa=partsA[1], db=partsB[0], sb=partsB[1];
     const d=ORD.indexOf(da)-ORD.indexOf(db);
     return d||(sa==='Almuerzo'?0:1)-(sb==='Almuerzo'?0:1);
   });
   nav.innerHTML='<span class="dia-nav-label">IR A →</span>'+sorted.map(g=>{
-    const[dia,srv]=g.split('|');
+    const parts=g.split(' · ');
+    const dia=parts[0], srv=parts[1];
+    // Mismo cálculo de ID que en dia-sec: split por ' · ', tomar cada parte
     const id='ds-'+normDiaId(dia)+'-'+srv;
     const lbl=(ABR[dia]||dia.slice(0,3))+' '+(srv==='Almuerzo'?'A':'C');
     return `<button class="dia-nav-btn" data-dsid="${id}" onclick="scrollToDia('${id}')">${lbl}</button>`;
