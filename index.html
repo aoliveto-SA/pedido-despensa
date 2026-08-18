@@ -1218,9 +1218,27 @@ function iniciarSync() {
       } else {
         semanaInicio = semanaGuardada;
       }
-    } else {
+    } else if (doc.metadata.fromCache) {
+      // SALVAGUARDA: esta lectura "no existe" viene de la caché local, no confirmada
+      // todavía por el servidor (típico al arrancar con conexión lenta/inestable).
+      // NO la tratamos como "documento vacío" porque podría ser un falso negativo:
+      // si escribiéramos acá, se borraría el pedido real guardado en el servidor
+      // apenas se detecte esta lectura ambigua. Esperamos la confirmación real.
+      return;
+    } else if (!_firebaseListo) {
+      // Confirmado por el servidor (no es de caché) y todavía no habíamos cargado
+      // ningún estado real en esta sesión: recién acá es un primer uso legítimo.
       items=[]; mermas={ ...MERMAS_DEFAULT }; proveedores=[]; plantillas=[]; cronOverrides={}; semanaInicio=mondayActual();
       ESTADO_REF.set({ items, mermas, proveedores, plantillas, cronOverrides, semanaInicio });
+    } else {
+      // Ya habíamos cargado datos reales en esta sesión y ahora el servidor dice
+      // que el documento "no existe": esto no debería pasar salvo que alguien lo
+      // haya borrado a mano en la consola de Firebase. Por seguridad, no lo
+      // recreamos vacío ni pisamos nada — avisamos y dejamos el último estado
+      // conocido tal cual está en pantalla.
+      console.error('El documento de estado desapareció en Firestore inesperadamente.');
+      mostrarNotif('⚠ La base compartida no encuentra el pedido guardado — no se modificó nada, avisá a soporte','warn');
+      return;
     }
     const si=document.getElementById('semanaInicioInput'); if(si) si.value=semanaInicio;
     _firebaseListo = true;
