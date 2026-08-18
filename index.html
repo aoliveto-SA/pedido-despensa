@@ -84,6 +84,25 @@ select:focus,input:focus{outline:2px solid var(--azul);border-color:transparent}
 .rec-ing-row{display:flex;justify-content:space-between;gap:10px;padding:3px 0;font-size:12.5px;border-bottom:1px solid #e5e7eb}
 .rec-ing-row:last-of-type{border-bottom:none}
 .rec-ing-cant{color:var(--azul-txt);font-weight:600;white-space:nowrap}
+
+/* Grilla de menú (día×turno × dieta) */
+.grilla-wrap{overflow:auto;border:1px solid var(--borde);border-radius:var(--radio);background:var(--blanco);max-height:72vh}
+.grilla-tabla{border-collapse:separate;border-spacing:0;font-size:11px;width:max-content}
+.grilla-tabla th{background:var(--fondo);color:var(--gris);font-weight:700;text-transform:uppercase;letter-spacing:.03em;padding:6px 5px;border-bottom:1px solid var(--borde);border-right:1px solid var(--borde);position:sticky;top:0;z-index:2;white-space:nowrap;font-size:10px}
+.grilla-tabla th.grilla-corner{left:0;z-index:3;text-transform:none;font-size:11px}
+.grilla-tabla th.grilla-rowlabel{position:sticky;left:0;z-index:1;background:var(--azul-claro);color:var(--azul-txt);text-align:left;padding:6px 8px;text-transform:none;font-weight:600;white-space:nowrap}
+.grilla-tabla th.grilla-rowlabel small{font-weight:500;color:var(--gris)}
+.grilla-cell{border-bottom:1px solid var(--borde);border-right:1px solid var(--borde);padding:0;width:110px;min-width:110px;vertical-align:top}
+.grilla-cell.vacio{text-align:center;vertical-align:middle;color:#d1d5db;cursor:pointer;font-size:16px;height:44px}
+.grilla-cell.vacio:hover{background:var(--azul-claro);color:var(--azul)}
+.grilla-item{padding:5px 6px;cursor:pointer;border-bottom:1px solid #f0f1f3}
+.grilla-item:last-child{border-bottom:none}
+.grilla-item:hover{background:var(--fondo)}
+.grilla-item-nombre{font-size:10.5px;line-height:1.25;margin-bottom:3px;word-break:break-word}
+.grilla-item-foot{display:flex;align-items:center;justify-content:space-between;gap:4px}
+.grilla-item-foot input{width:36px;padding:2px 3px;font-size:10px;text-align:center;border:1px solid var(--borde);border-radius:3px}
+.grilla-item-foot .del{font-size:14px;padding:0 2px;color:#ccc}
+.grilla-resumen{font-size:12px;color:var(--gris);margin-bottom:8px}
 @media (max-width:640px){
   .dia-acc-body{grid-template-columns:1fr}
   .dia-acc-col:first-child{border-right:none;border-bottom:1px solid var(--borde)}
@@ -228,10 +247,15 @@ tr:hover td{background:var(--fondo)}
       <p style="font-size:12px;color:var(--gris);margin-top:2px">Qué se cocina cada día y en qué cantidad</p>
     </div>
   </div>
-  <div id="lista"><div class="empty">Cargá platos desde el macro o armá un combo manual</div></div>
+  <div style="display:flex;gap:6px;margin-bottom:10px">
+    <button class="btn btn-a" id="btnVistaGrilla" onclick="cambiarVistaMenu('grilla')" style="flex:0 0 auto;padding:6px 12px;font-size:12px">▦ Grilla (día × dieta)</button>
+    <button class="btn btn-s" id="btnVistaLista" onclick="cambiarVistaMenu('lista')" style="flex:0 0 auto;padding:6px 12px;font-size:12px">☰ Lista por día</button>
+  </div>
+  <div id="grilla-menu"></div>
+  <div id="lista" style="display:none"><div class="empty">Cargá platos desde el macro o armá un combo manual</div></div>
   <button class="btn btn-w" onclick="goTab('pedido')">Ver pedido consolidado ↗</button>
 
-  <details style="margin-top:18px">
+  <details id="combo-detalle" style="margin-top:18px">
     <summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--azul-txt);padding:10px 2px">Cargar o agregar platos al menú</summary>
     <div style="margin-top:10px">
 
@@ -1278,7 +1302,82 @@ function iniciarSync() {
 let items=[], mermas={ ...MERMAS_DEFAULT }, proveedores=[], plantillas=[];
 let cronOverrides={}, semanaInicio='';
 let comboRecetas=[], recSelC='';
+let comboEditId=null;
+let vistaMenu='grilla';
 let filtroU='todo',vista='consolidado';
+
+function cambiarVistaMenu(v){
+  vistaMenu=v;
+  document.getElementById('grilla-menu').style.display = v==='grilla'?'block':'none';
+  document.getElementById('lista').style.display = v==='lista'?'block':'none';
+  document.getElementById('btnVistaGrilla').className = v==='grilla'?'btn btn-a':'btn btn-s';
+  document.getElementById('btnVistaLista').className = v==='lista'?'btn btn-a':'btn btn-s';
+}
+
+// Abre (o crea) el casillero día+turno+dieta clickeado en la grilla, precargando
+// el combo-builder existente con lo que ya haya cargado para editarlo en el lugar.
+function abrirCeldaGrilla(dia,srv,diet,idForzado){
+  const it = idForzado!=null ? items.find(i=>i.id===idForzado) : items.find(i=>i.dia===dia&&i.srv===srv&&i.diet===diet);
+  comboEditId = it ? it.id : null;
+  comboRecetas = it ? [...it.recetas] : [];
+  document.getElementById('cDia').value = dia;
+  document.getElementById('cSrv').value = srv;
+  document.getElementById('cDieta').value = diet;
+  document.getElementById('cPor').value = it ? it.porciones : 30;
+  const det = document.getElementById('combo-detalle');
+  if(det && !det.open) det.open = true;
+  renderComboActual();
+  mostrarNotif(`Editando ${DIETAS[diet]||diet} · ${dia} ${srv}`, 'warn');
+  setTimeout(()=>{
+    const card = document.getElementById('combo-detalle');
+    if(card) card.scrollIntoView({behavior:'smooth', block:'start'});
+    const inp = document.getElementById('cRec');
+    if(inp) inp.focus();
+  }, 60);
+}
+
+function renderGrilla(){
+  const el = document.getElementById('grilla-menu');
+  if(!el) return;
+  const dietaKeys = Object.keys(DIETAS);
+  const mapa = {};
+  items.forEach(it=>{
+    const k = it.dia+'|'+it.srv+'|'+it.diet;
+    (mapa[k]=mapa[k]||[]).push(it);
+  });
+  const totalCasilleros = DIAS_ORDEN.length*2*dietaKeys.length;
+  let llenos=0;
+  DIAS_ORDEN.forEach(dia=>['Almuerzo','Cena'].forEach(srv=>dietaKeys.forEach(dk=>{
+    if((mapa[dia+'|'+srv+'|'+dk]||[]).length) llenos++;
+  })));
+
+  const thead = '<tr><th class="grilla-corner">Día / turno</th>' + dietaKeys.map(dk=>`<th title="${DIETAS[dk]}">${dk}</th>`).join('') + '</tr>';
+  let rows='';
+  DIAS_ORDEN.forEach(dia=>{
+    ['Almuerzo','Cena'].forEach(srv=>{
+      rows += `<tr><th class="grilla-rowlabel">${dia}<br><small>${srv==='Almuerzo'?'☀️ Almuerzo':'🌙 Cena'}</small></th>`;
+      dietaKeys.forEach(dk=>{
+        const arr = mapa[dia+'|'+srv+'|'+dk]||[];
+        if(arr.length){
+          rows += `<td class="grilla-cell">` + arr.map(it=>`
+            <div class="grilla-item" onclick="abrirCeldaGrilla('${dia}','${srv}','${dk}',${it.id})" title="${it.recetas.join(', ').replace(/"/g,'&quot;')}">
+              <div class="grilla-item-nombre">${it.desdeMacro?'⚡':''}${(it.nombre.length>28?it.nombre.slice(0,25)+'…':it.nombre)}</div>
+              <div class="grilla-item-foot">
+                <input type="number" min="1" value="${it.porciones}" onclick="event.stopPropagation()" onchange="upd(${it.id},parseInt(this.value)||1)">
+                <button class="del" onclick="event.stopPropagation();borrar(${it.id})">×</button>
+              </div>
+            </div>`).join('') + `</td>`;
+        } else {
+          rows += `<td class="grilla-cell vacio" onclick="abrirCeldaGrilla('${dia}','${srv}','${dk}')" title="Agregar ${DIETAS[dk]} — ${dia} ${srv}">+</td>`;
+        }
+      });
+      rows += '</tr>';
+    });
+  });
+
+  el.innerHTML = `<div class="grilla-resumen">${llenos} de ${totalCasilleros} casilleros completos — hacé click en cualquier casillero para cargar o editar ese día/turno/dieta</div>
+    <div class="grilla-wrap"><table class="grilla-tabla"><thead>${thead}</thead><tbody>${rows}</tbody></table></div>`;
+}
 function getNombres(){ return Object.keys(REC).sort((a,b)=>a.localeCompare(b,'es')); }
 
 // ─── MACRO ───
@@ -1342,7 +1441,7 @@ function addRecetaAlCombo(){
   renderComboActual();
 }
 function quitarRecetaDeCombo(n){comboRecetas=comboRecetas.filter(r=>r!==n);renderComboActual();}
-function limpiarCombo(){comboRecetas=[];renderComboActual();}
+function limpiarCombo(){comboRecetas=[];comboEditId=null;renderComboActual();}
 function renderComboActual(){
   const el=document.getElementById('combo-recetas-actual');
   if(!comboRecetas.length){el.innerHTML='<div style="font-size:12px;color:var(--gris);font-style:italic;padding:4px 0">Sin recetas en el combo</div>';return;}
@@ -1356,9 +1455,23 @@ function confirmarCombo(){
   const por=parseInt(document.getElementById('cPor').value)||1;
   const ings=[];
   comboRecetas.forEach(r=>REC[r].i.forEach(ing=>ings.push({...ing,receta:r})));
-  items.push({dia,srv,diet,nombre:comboRecetas.join(' + '),recetas:[...comboRecetas],ingredientes:ings,porciones:por,id:Date.now(),esCombo:true});
+  if(comboEditId){
+    const it=items.find(i=>i.id===comboEditId);
+    if(it){
+      it.dia=dia;it.srv=srv;it.diet=diet;
+      it.nombre=comboRecetas.join(' + ');
+      it.recetas=[...comboRecetas];
+      it.ingredientes=ings;
+      it.porciones=por;
+      delete it.desdeMacro; // se editó a mano, ya no es el valor automático del macro
+      mostrarNotif('✓ Casillero actualizado');
+    }
+    comboEditId=null;
+  } else {
+    items.push({dia,srv,diet,nombre:comboRecetas.join(' + '),recetas:[...comboRecetas],ingredientes:ings,porciones:por,id:Date.now(),esCombo:true});
+    mostrarNotif('✓ Combo agregado al menú');
+  }
   comboRecetas=[];renderComboActual();renderLista();guardarEstado();
-  mostrarNotif('✓ Combo agregado al menú');
 }
 
 // ─── PLANTILLAS ───
@@ -1392,7 +1505,10 @@ function renderPlantillas(){
 }
 
 // ─── LISTA MENÚ ───
-function borrar(id){items=items.filter(i=>i.id!==id);renderLista();guardarEstado();}
+function borrar(id){
+  if(comboEditId===id) comboEditId=null;
+  items=items.filter(i=>i.id!==id);renderLista();guardarEstado();
+}
 function upd(id,val){const it=items.find(i=>i.id===id);if(it){it.porciones=val;guardarEstado();}}
 let menuDiasAbiertos=null;
 function toggleDiaMenu(dia){
@@ -1421,6 +1537,7 @@ function renderColMenu(arr){
     </div>`).join('');
 }
 function renderLista(){
+  renderGrilla();
   const el=document.getElementById('lista');
   if(!items.length){el.innerHTML='<div class="empty">Cargá platos desde el macro o armá un combo manual</div>';menuDiasAbiertos=null;return;}
   const porDia={};
@@ -2225,6 +2342,7 @@ function goTab(t){
 
   document.querySelectorAll('.sec').forEach(s=>s.className='sec');
   document.getElementById('tab-'+seccion).className='sec on';
+  if(seccion==='menu')renderGrilla();
   if(seccion==='pedido')renderPedido();
   if(seccion==='proveedores'){renderProveedores();renderCronograma();}
   if(seccion==='mermas')renderMermas();
@@ -2235,6 +2353,7 @@ function goTab(t){
 }
 
 iniciarSync();
+setTimeout(renderGrilla, 0); // pintar la estructura de la grilla (252 casilleros) desde el arranque, sin esperar a Firestore
 
 // ─── PROCESADOR DE ARCHIVOS DE RECETAS (CSV y ZIP) ───
 function procesarArchivoRecetas(input) {
