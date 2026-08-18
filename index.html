@@ -206,104 +206,120 @@ tr:hover td{background:var(--fondo)}
 
 <div class="container">
 <div class="tabs">
-  <button class="tab on" onclick="goTab('menu')">1 · Menú</button>
-  <button class="tab" onclick="goTab('plantillas')">2 · Plantillas</button>
-  <button class="tab" onclick="goTab('pedido')">3 · Pedido</button>
-  <button class="tab" onclick="goTab('proveedores')">4 · Proveedores</button>
-  <button class="tab" onclick="goTab('mermas')">5 · Mermas</button>
-  <button class="tab" onclick="goTab('cargar-recetas')">6 · Cargar Recetas</button>
+  <button class="tab on" data-tab="menu" onclick="goTab('menu')">1 · Menú</button>
+  <button class="tab" data-tab="pedido" onclick="goTab('pedido')">2 · Pedido</button>
+  <button class="tab" data-tab="config" onclick="goTab('config')">⚙ Configuración</button>
+</div>
+<div class="tabs" id="configSubTabs" style="display:none">
+  <button class="tab on" data-subtab="plantillas" onclick="goTab('plantillas')">Plantillas</button>
+  <button class="tab" data-subtab="proveedores" onclick="goTab('proveedores')">Proveedores</button>
+  <button class="tab" data-subtab="mermas" onclick="goTab('mermas')">Mermas</button>
+  <button class="tab" data-subtab="cargar-recetas" onclick="goTab('cargar-recetas')">Cargar Recetas</button>
 </div>
 
 <!-- ═══ TAB 1: MENU ═══ -->
 <div id="tab-menu" class="sec on">
 
-  <div class="macro-card">
-    <div class="card-title">⚡ Cargar desde cuadro macro</div>
-    <div class="form-row">
-      <div class="form-col"><label>Día</label>
-        <select id="mDia" style="width:110px" onchange="previewMacro()">
-          <option>Lunes</option><option>Martes</option><option>Miércoles</option>
-          <option>Jueves</option><option>Viernes</option><option>Sábado</option><option>Domingo</option>
-        </select>
-      </div>
-      <div class="form-col"><label>Servicio</label>
-        <select id="mSrv" style="width:105px" onchange="previewMacro()">
-          <option>Almuerzo</option><option>Cena</option>
-        </select>
-      </div>
-      <div class="form-col"><label>Dieta</label>
-        <select id="mDieta" style="width:130px" onchange="previewMacro()">
-          <option value="g">General</option><option value="l">Liviano</option>
-          <option value="lc">Liv. c/carne</option><option value="n">Niño</option>
-          <option value="a">Adolescente</option><option value="b1">Bebé 1</option>
-          <option value="b2">Bebé 2</option><option value="dbt">DBT</option>
-          <option value="bcb">BCB</option><option value="veg">Vegetariano</option>
-          <option value="cel">Celíaco</option><option value="ast">Astringente</option>
-          <option value="sl">Súper liviano</option><option value="ids4">IDSSI 4</option>
-          <option value="ids5">IDSSI 5</option><option value="ids6">IDSSI 6</option>
-          <option value="ids7">IDSSI 7</option><option value="exc">Excepción</option>
-        </select>
-      </div>
-      <div class="form-col"><label>Porciones</label>
-        <input type="number" id="mPor" value="30" min="1" style="width:70px">
-      </div>
-      <button class="btn btn-g" onclick="cargarDesdeMacro()" style="align-self:flex-end">↓ Cargar</button>
-    </div>
-    <div id="macro-preview" class="macro-preview" style="display:none"></div>
-  </div>
-
   <div id="notif" class="notif"></div>
 
-  <div class="card">
-    <div class="card-title">
-      🍽 Agregar combo manual
-      <button class="btn btn-s" style="font-size:11px;padding:3px 8px" onclick="limpiarCombo()">Limpiar</button>
-    </div>
-    <div class="form-row">
-      <div class="form-col"><label>Día</label>
-        <select id="cDia" style="width:110px"><option>Lunes</option><option>Martes</option><option>Miércoles</option><option>Jueves</option><option>Viernes</option><option>Sábado</option><option>Domingo</option></select>
-      </div>
-      <div class="form-col"><label>Servicio</label>
-        <select id="cSrv" style="width:105px"><option>Almuerzo</option><option>Cena</option></select>
-      </div>
-      <div class="form-col"><label>Dieta</label>
-        <select id="cDieta" style="width:130px">
-          <option value="g">General</option><option value="l">Liviano</option>
-          <option value="lc">Liv. c/carne</option><option value="n">Niño</option>
-          <option value="a">Adolescente</option><option value="b1">Bebé 1</option>
-          <option value="b2">Bebé 2</option><option value="dbt">DBT</option>
-          <option value="bcb">BCB</option><option value="veg">Vegetariano</option>
-          <option value="cel">Celíaco</option><option value="ast">Astringente</option>
-          <option value="sl">Súper liviano</option><option value="ids4">IDSSI 4</option>
-          <option value="ids5">IDSSI 5</option><option value="ids6">IDSSI 6</option>
-          <option value="ids7">IDSSI 7</option><option value="exc">Excepción</option>
-        </select>
-      </div>
-      <div class="form-col"><label>Porciones</label>
-        <input type="number" id="cPor" value="30" min="1" style="width:70px">
-      </div>
-    </div>
-    <div class="form-row" style="margin-bottom:8px">
-      <div class="form-col grow">
-        <div class="srch">
-          <input type="text" id="cRec" placeholder="Buscar receta para el combo..." autocomplete="off"
-            oninput="filtrarC()" onfocus="filtrarC()" onblur="setTimeout(()=>closeDrop('cdrop'),200)">
-          <div id="cdrop" class="drop"></div>
-        </div>
-      </div>
-      <button class="btn btn-s" onclick="addRecetaAlCombo()" style="align-self:flex-end">+ Agregar</button>
-    </div>
-    <div id="combo-recetas-actual" style="margin-bottom:10px">
-      <div style="font-size:12px;color:var(--gris);font-style:italic;padding:6px 0">Sin recetas en el combo</div>
-    </div>
-    <div class="form-row" style="margin-bottom:0">
-      <button class="btn btn-a" style="flex:1" onclick="confirmarCombo()">✓ Confirmar combo</button>
-      <button class="btn btn-s" style="flex:1" onclick="guardarPlantilla()">☆ Guardar como plantilla</button>
+  <div class="section-hdr">
+    <div>
+      <h2 style="font-size:15px;font-weight:600">Menú de la semana</h2>
+      <p style="font-size:12px;color:var(--gris);margin-top:2px">Qué se cocina cada día y en qué cantidad</p>
     </div>
   </div>
-
   <div id="lista"><div class="empty">Cargá platos desde el macro o armá un combo manual</div></div>
   <button class="btn btn-w" onclick="goTab('pedido')">Ver pedido consolidado ↗</button>
+
+  <details style="margin-top:18px">
+    <summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--azul-txt);padding:10px 2px">Cargar o agregar platos al menú</summary>
+    <div style="margin-top:10px">
+
+      <div class="macro-card">
+        <div class="card-title">⚡ Cargar desde cuadro macro</div>
+        <div class="form-row">
+          <div class="form-col"><label>Día</label>
+            <select id="mDia" style="width:110px" onchange="previewMacro()">
+              <option>Lunes</option><option>Martes</option><option>Miércoles</option>
+              <option>Jueves</option><option>Viernes</option><option>Sábado</option><option>Domingo</option>
+            </select>
+          </div>
+          <div class="form-col"><label>Servicio</label>
+            <select id="mSrv" style="width:105px" onchange="previewMacro()">
+              <option>Almuerzo</option><option>Cena</option>
+            </select>
+          </div>
+          <div class="form-col"><label>Dieta</label>
+            <select id="mDieta" style="width:130px" onchange="previewMacro()">
+              <option value="g">General</option><option value="l">Liviano</option>
+              <option value="lc">Liv. c/carne</option><option value="n">Niño</option>
+              <option value="a">Adolescente</option><option value="b1">Bebé 1</option>
+              <option value="b2">Bebé 2</option><option value="dbt">DBT</option>
+              <option value="bcb">BCB</option><option value="veg">Vegetariano</option>
+              <option value="cel">Celíaco</option><option value="ast">Astringente</option>
+              <option value="sl">Súper liviano</option><option value="ids4">IDSSI 4</option>
+              <option value="ids5">IDSSI 5</option><option value="ids6">IDSSI 6</option>
+              <option value="ids7">IDSSI 7</option><option value="exc">Excepción</option>
+            </select>
+          </div>
+          <div class="form-col"><label>Porciones</label>
+            <input type="number" id="mPor" value="30" min="1" style="width:70px">
+          </div>
+          <button class="btn btn-g" onclick="cargarDesdeMacro()" style="align-self:flex-end">↓ Cargar</button>
+        </div>
+        <div id="macro-preview" class="macro-preview" style="display:none"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          🍽 Agregar combo manual
+          <button class="btn btn-s" style="font-size:11px;padding:3px 8px" onclick="limpiarCombo()">Limpiar</button>
+        </div>
+        <div class="form-row">
+          <div class="form-col"><label>Día</label>
+            <select id="cDia" style="width:110px"><option>Lunes</option><option>Martes</option><option>Miércoles</option><option>Jueves</option><option>Viernes</option><option>Sábado</option><option>Domingo</option></select>
+          </div>
+          <div class="form-col"><label>Servicio</label>
+            <select id="cSrv" style="width:105px"><option>Almuerzo</option><option>Cena</option></select>
+          </div>
+          <div class="form-col"><label>Dieta</label>
+            <select id="cDieta" style="width:130px">
+              <option value="g">General</option><option value="l">Liviano</option>
+              <option value="lc">Liv. c/carne</option><option value="n">Niño</option>
+              <option value="a">Adolescente</option><option value="b1">Bebé 1</option>
+              <option value="b2">Bebé 2</option><option value="dbt">DBT</option>
+              <option value="bcb">BCB</option><option value="veg">Vegetariano</option>
+              <option value="cel">Celíaco</option><option value="ast">Astringente</option>
+              <option value="sl">Súper liviano</option><option value="ids4">IDSSI 4</option>
+              <option value="ids5">IDSSI 5</option><option value="ids6">IDSSI 6</option>
+              <option value="ids7">IDSSI 7</option><option value="exc">Excepción</option>
+            </select>
+          </div>
+          <div class="form-col"><label>Porciones</label>
+            <input type="number" id="cPor" value="30" min="1" style="width:70px">
+          </div>
+        </div>
+        <div class="form-row" style="margin-bottom:8px">
+          <div class="form-col grow">
+            <div class="srch">
+              <input type="text" id="cRec" placeholder="Buscar receta para el combo..." autocomplete="off"
+                oninput="filtrarC()" onfocus="filtrarC()" onblur="setTimeout(()=>closeDrop('cdrop'),200)">
+              <div id="cdrop" class="drop"></div>
+            </div>
+          </div>
+          <button class="btn btn-s" onclick="addRecetaAlCombo()" style="align-self:flex-end">+ Agregar</button>
+        </div>
+        <div id="combo-recetas-actual" style="margin-bottom:10px">
+          <div style="font-size:12px;color:var(--gris);font-style:italic;padding:6px 0">Sin recetas en el combo</div>
+        </div>
+        <div class="form-row" style="margin-bottom:0">
+          <button class="btn btn-a" style="flex:1" onclick="confirmarCombo()">✓ Confirmar combo</button>
+          <button class="btn btn-s" style="flex:1" onclick="guardarPlantilla()">☆ Guardar como plantilla</button>
+        </div>
+      </div>
+
+    </div>
+  </details>
 </div>
 
 <!-- ═══ TAB 2: PLANTILLAS ═══ -->
@@ -2189,18 +2205,33 @@ function scrollToTop(){
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
+// "Configuración" agrupa las sub-pestañas que se usan poco (se configuran una vez,
+// no a diario): Plantillas, Proveedores, Mermas y Cargar Recetas. Quedan afuera de
+// la barra principal para que el uso diario (Menú/Pedido) no compita visualmente
+// con ellas, pero siguen funcionando exactamente igual que antes.
+const SA_TABS_CONFIG = ['plantillas','proveedores','mermas','cargar-recetas'];
+let SA_CONFIG_SUBTAB_ACTUAL = 'plantillas'; // subpestaña que se muestra al entrar a Configuración
+
 function goTab(t){
-  const tabs=['menu','plantillas','pedido','proveedores','mermas','cargar-recetas'];
-  document.querySelectorAll('.tab').forEach((b,i)=>b.className='tab'+(tabs[i]===t?' on':''));
+  const esSubtabConfig = SA_TABS_CONFIG.includes(t);
+  if(esSubtabConfig) SA_CONFIG_SUBTAB_ACTUAL = t;
+  const tabPrincipal = esSubtabConfig ? 'config' : t;
+  const seccion = esSubtabConfig ? t : (t==='config' ? SA_CONFIG_SUBTAB_ACTUAL : t);
+
+  document.querySelectorAll('.tab[data-tab]').forEach(b=>b.classList.toggle('on', b.dataset.tab===tabPrincipal));
+  document.querySelectorAll('.tab[data-subtab]').forEach(b=>b.classList.toggle('on', b.dataset.subtab===seccion));
+  const barraSub=document.getElementById('configSubTabs');
+  if(barraSub) barraSub.style.display = tabPrincipal==='config' ? 'flex' : 'none';
+
   document.querySelectorAll('.sec').forEach(s=>s.className='sec');
-  document.getElementById('tab-'+t).className='sec on';
-  if(t==='pedido')renderPedido();
-  if(t==='proveedores'){renderProveedores();renderCronograma();}
-  if(t==='mermas')renderMermas();
-  if(t==='plantillas')renderPlantillas();
-  if(t==='cargar-recetas')renderGestorRecetas();
+  document.getElementById('tab-'+seccion).className='sec on';
+  if(seccion==='pedido')renderPedido();
+  if(seccion==='proveedores'){renderProveedores();renderCronograma();}
+  if(seccion==='mermas')renderMermas();
+  if(seccion==='plantillas')renderPlantillas();
+  if(seccion==='cargar-recetas')renderGestorRecetas();
   // Ocultar nav si salís de pedido
-  if(t!=='pedido'){const nav=document.getElementById('diaNave');if(nav){nav.classList.remove('vis');nav.innerHTML='';}}
+  if(seccion!=='pedido'){const nav=document.getElementById('diaNave');if(nav){nav.classList.remove('vis');nav.innerHTML='';}}
 }
 
 iniciarSync();
