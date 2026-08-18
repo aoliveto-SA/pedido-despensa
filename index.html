@@ -536,7 +536,16 @@ window.addEventListener('scroll',()=>{
 // ════════════════════════════════════════════
 // CONTROL DE ACCESO — MODO LECTURA / ADMIN
 // ════════════════════════════════════════════
-const SA_ADMIN_PASS = '134679';
+// La clave de admin NO se guarda en texto plano acá — se guarda su hash SHA-256,
+// para que no quede visible con un simple "Ver código fuente" del navegador.
+// (Aclaración honesta: esto no es seguridad real de servidor — alguien con las
+// herramientas de desarrollador todavía podría saltear el modo lectura a mano.
+// Solo evita que la clave quede expuesta como texto plano a simple vista.)
+const SA_ADMIN_PASS_HASH = 'c4e4866953bba378413a4558ee984a68ad52e4ce2fa039d4966182fefa632901';
+async function saHashClave(txt){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(txt));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
 let SA_ES_ADMIN = sessionStorage.getItem('SA_ADMIN') === '1';
 
 // ════════════════════════════════════════════
@@ -626,9 +635,10 @@ function saAbrirLogin(){
 function saCerrarLogin(){
   document.getElementById('saLoginOverlay').style.display='none';
 }
-function saIntentarLogin(){
+async function saIntentarLogin(){
   const val=document.getElementById('saClaveInput').value.trim();
-  if(val===SA_ADMIN_PASS){
+  const hash=await saHashClave(val);
+  if(hash===SA_ADMIN_PASS_HASH){
     SA_ES_ADMIN=true;
     sessionStorage.setItem('SA_ADMIN','1');
     saAplicarModo(document);
