@@ -1274,7 +1274,7 @@ function previewMacro(){
   const el=document.getElementById('macro-preview');
   if(!rec.length){el.style.display='none';return;}
   el.style.display='block';
-  el.innerHTML=rec.map(r=>{const d=REC[r];return`<div class="mi"><span class="pill ${TPILL[d?d.t:'']||'pill pill-ot'}" style="font-size:10px">${d?d.t:'?'}</span><span>${r}</span>${!d?'<span style="font-size:10px;color:var(--rojo)">⚠ sin receta</span>':''}</div>`;}).join('');
+  el.innerHTML=rec.map(r=>{const d=buscarReceta(r);return`<div class="mi"><span class="pill ${TPILL[d?d.t:'']||'pill pill-ot'}" style="font-size:10px">${d?d.t:'?'}</span><span>${r}</span>${!d?'<span style="font-size:10px;color:var(--rojo)">⚠ sin receta</span>':''}</div>`;}).join('');
 }
 
 function cargarDesdeMacro(){
@@ -1284,11 +1284,11 @@ function cargarDesdeMacro(){
   const por=parseInt(document.getElementById('mPor').value)||1;
   const rec=(MACRO[srv]&&MACRO[srv][diet]&&MACRO[srv][diet][dia])||[];
   if(!rec.length){mostrarNotif('No hay platos configurados para esta combinación','warn');return;}
-  const conRec=rec.filter(r=>REC[r]);
-  const sinRec=rec.filter(r=>!REC[r]);
+  const conRec=rec.filter(r=>buscarReceta(r));
+  const sinRec=rec.filter(r=>!buscarReceta(r));
   if(!conRec.length){mostrarNotif('Ninguna receta del macro tiene ingredientes cargados','warn');return;}
   const ings=[];
-  conRec.forEach(r=>REC[r].i.forEach(ing=>ings.push({...ing,receta:r})));
+  conRec.forEach(r=>buscarReceta(r).i.forEach(ing=>ings.push({...ing,receta:r})));
   items.push({dia,srv,diet,nombre:conRec.join(' + '),recetas:conRec,ingredientes:ings,porciones:por,id:Date.now(),esCombo:true,desdeMacro:true});
   renderLista();guardarEstado();
   let msg=`✓ ${conRec.length} platos cargados — ${DIETAS[diet]}, ${dia} ${srv}`;
@@ -1764,6 +1764,19 @@ function normKey(s){
     .toLowerCase()
     .replace(/\s+/g,' ')
     .trim();
+}
+
+// Busca una receta en REC tolerando diferencias de tilde/may\u00fascula/espacios
+// (ej. "Sopa munici\u00f3n" del cuadro macro vs "Sopa Munici\u00f3n" en la base de recetas).
+// Primero intenta la coincidencia exacta (r\u00e1pida); si no hay, compara nombres normalizados.
+function buscarReceta(nombre){
+  if(REC[nombre]) return REC[nombre];
+  const nk = normKey(nombre);
+  if(!nk) return undefined;
+  for(const k of Object.keys(REC)){
+    if(normKey(k)===nk) return REC[k];
+  }
+  return undefined;
 }
 
 function getMerma(n){const nl=n.toLowerCase();for(const[k,v] of Object.entries(mermas)){if(nl.includes(k))return v/100;}return 0;}
@@ -2765,8 +2778,31 @@ function matchFilaMacro(label){
   for(const [pat,key,modo] of MACRO_ROW_PREFIX){ if(n.startsWith(pat)) return {key,modo}; }
   return null;
 }
-function dividirItemsCelda(texto){
-  return (texto||'')
+function dividirItemsCelda(texto, key){
+  texto = texto||'';
+
+  // Filas de "Excepciones": cada plato va en su propio renglón marcado con un guion
+  // al inicio (ej. "-MILANESA\n-OMELETTE\n-VERDURAS AL HORNO"), no separados por "+".
+  if(key==='exc'){
+    return texto.split(/\n+/)
+      .map(s=>s.replace(/^\s*-\s*/,'').replace(/\s+/g,' ').trim())
+      .filter(Boolean)
+      .map(s=> s.length ? s[0].toUpperCase()+s.slice(1).toLowerCase() : s);
+  }
+
+  // Menú Celíaco: cada renglón es una opción de menú alternativa numerada
+  // ("1) ... + ...", "2) ...") y puede traer una línea aparte "POSTRE: ...".
+  // Cada renglón se procesa por separado (y dentro de cada uno sí vale el "+").
+  if(key==='cel'){
+    const out=[];
+    texto.split(/\n+/).map(s=>s.trim()).filter(Boolean).forEach(linea=>{
+      const limpia = linea.replace(/^\s*\d+\)\s*/,'').replace(/^POSTRE:\s*/i,'');
+      dividirItemsCelda(limpia).forEach(x=>out.push(x));
+    });
+    return out;
+  }
+
+  return texto
     .split(/\s*\+\s*/)
     .map(s=>s.replace(/\s+/g,' ').trim())
     .filter(Boolean)
@@ -2803,11 +2839,31 @@ async function procesarCuadroMacro(input){
     let servicioActual = null, ordenDias = null;
     let filasReconocidas = 0;
 
+    // c.textContent aplana todos los párrafos de la celda en una sola línea sin
+    // separador, así que "1) opción A" y "2) opción B" (en párrafos distintos de
+    // Word) quedaban pegados sin espacio. Esta versión conserva un salto de línea
+    // por párrafo, necesario para separar bien las filas de Excepciones y Menú Celíaco.
+    function textoCeldaConSaltos(c){
+      // Word suele meter varios renglones dentro del MISMO párrafo con saltos de
+      // línea "manuales" (<br>), no párrafos <p> separados — hay que convertirlos
+      // a saltos de línea reales antes de leer el texto, si no, quedan pegados
+      // (ej. "POLENTA" + "POSTRE: ..." sin espacio entre medio).
+      const clone = c.cloneNode(true);
+      clone.querySelectorAll('br').forEach(br=>br.replaceWith('\n'));
+      const ps = [...clone.querySelectorAll('p')];
+      const bruto = ps.length ? ps.map(p=>p.textContent).join('\n') : clone.textContent;
+      return bruto.split('\n')
+        .map(l=>l.replace(/[^\S\n]+/g,' ').trim())
+        .filter(Boolean)
+        .join('\n');
+    }
+
     tablas.forEach(tabla=>{
       [...tabla.querySelectorAll('tr')].forEach(fila=>{
         const celdas = [...fila.querySelectorAll('td,th')];
         if(!celdas.length) return;
         const textos = celdas.map(c=>c.textContent.replace(/\s+/g,' ').trim());
+        const textosCrudos = celdas.map(textoCeldaConSaltos);
         const primera = normFila(textos[0]);
 
         // Fila de encabezado de servicio (ALMUERZO / CENA + días)
@@ -2831,7 +2887,7 @@ async function procesarCuadroMacro(input){
         if(!nuevo[servicioActual][m.key]) nuevo[servicioActual][m.key]={};
         ordenDias.forEach((dia,idx)=>{
           if(!dia) return;
-          const items = dividirItemsCelda(textos[idx+1]);
+          const items = dividirItemsCelda(textosCrudos[idx+1], m.key);
           if(!items.length) return;
           if(!nuevo[servicioActual][m.key][dia]) nuevo[servicioActual][m.key][dia]=[];
           if(m.modo==='reemplaza' && nuevo[servicioActual][m.key][dia]._inicializadaReemplazo!==true){
