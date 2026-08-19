@@ -103,6 +103,20 @@ select:focus,input:focus{outline:2px solid var(--azul);border-color:transparent}
 .grilla-item-foot input{width:36px;padding:2px 3px;font-size:10px;text-align:center;border:1px solid var(--borde);border-radius:3px}
 .grilla-item-foot .del{font-size:14px;padding:0 2px;color:#ccc}
 .grilla-resumen{font-size:12px;color:var(--gris);margin-bottom:8px}
+.grilla-cell.vacio.con-sugerencia{color:var(--azul-txt);background:var(--azul-claro);font-weight:700;font-size:11px}
+.grilla-cell.vacio.con-sugerencia:hover{background:#d3e6f7}
+.grilla-sug-badge{display:inline-block}
+
+/* Sugerencias del cuadro macro en el combo-builder */
+#macro-sugerencias-combo{margin:2px 0 10px}
+.macro-sug-box{border:1px solid #93c5fd;background:var(--azul-claro);border-radius:6px;padding:8px 10px}
+.macro-sug-titulo{font-size:11.5px;font-weight:600;color:var(--azul-txt);margin-bottom:6px}
+.macro-sug-item{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:3px 0;font-size:12px;border-bottom:1px solid #cfe3f7}
+.macro-sug-item:last-child{border-bottom:none}
+.macro-sug-item.agregado{opacity:.6}
+.macro-sug-ok{font-size:11px;color:var(--verde-txt);font-weight:600;white-space:nowrap}
+.macro-sug-warn{font-size:10.5px;color:var(--amarillo-txt);white-space:nowrap}
+.macro-sug-vacio{font-size:11.5px;color:var(--gris);font-style:italic;padding:4px 0}
 @media (max-width:640px){
   .dia-acc-body{grid-template-columns:1fr}
   .dia-acc-col:first-child{border-right:none;border-bottom:1px solid var(--borde)}
@@ -301,13 +315,13 @@ tr:hover td{background:var(--fondo)}
         </div>
         <div class="form-row">
           <div class="form-col"><label>Día</label>
-            <select id="cDia" style="width:110px"><option>Lunes</option><option>Martes</option><option>Miércoles</option><option>Jueves</option><option>Viernes</option><option>Sábado</option><option>Domingo</option></select>
+            <select id="cDia" onchange="renderSugerenciasMacro()" style="width:110px"><option>Lunes</option><option>Martes</option><option>Miércoles</option><option>Jueves</option><option>Viernes</option><option>Sábado</option><option>Domingo</option></select>
           </div>
           <div class="form-col"><label>Servicio</label>
-            <select id="cSrv" style="width:105px"><option>Almuerzo</option><option>Cena</option></select>
+            <select id="cSrv" onchange="renderSugerenciasMacro()" style="width:105px"><option>Almuerzo</option><option>Cena</option></select>
           </div>
           <div class="form-col"><label>Dieta</label>
-            <select id="cDieta" style="width:130px">
+            <select id="cDieta" onchange="renderSugerenciasMacro()" style="width:130px">
               <option value="g">General</option><option value="l">Liviano</option>
               <option value="lc">Liv. c/carne</option><option value="n">Niño</option>
               <option value="a">Adolescente</option><option value="b1">Bebé 1</option>
@@ -323,6 +337,7 @@ tr:hover td{background:var(--fondo)}
             <input type="number" id="cPor" value="30" min="1" style="width:70px">
           </div>
         </div>
+        <div id="macro-sugerencias-combo"></div>
         <div class="form-row" style="margin-bottom:8px">
           <div class="form-col grow">
             <div class="srch">
@@ -1327,6 +1342,7 @@ function abrirCeldaGrilla(dia,srv,diet,idForzado){
   const det = document.getElementById('combo-detalle');
   if(det && !det.open) det.open = true;
   renderComboActual();
+  renderSugerenciasMacro();
   mostrarNotif(`Editando ${DIETAS[diet]||diet} · ${dia} ${srv}`, 'warn');
   setTimeout(()=>{
     const card = document.getElementById('combo-detalle');
@@ -1336,10 +1352,51 @@ function abrirCeldaGrilla(dia,srv,diet,idForzado){
   }, 60);
 }
 
+// Muestra, para el día/turno/dieta que se está cargando o editando, qué platos
+// dice el cuadro macro (Word) que van ahí — para no tener que ir a buscarlo aparte.
+function renderSugerenciasMacro(){
+  const el = document.getElementById('macro-sugerencias-combo');
+  if(!el) return;
+  const dia = document.getElementById('cDia').value;
+  const srv = document.getElementById('cSrv').value;
+  const diet = document.getElementById('cDieta').value;
+  const hayMacroCargado = typeof MACRO!=='undefined' && MACRO && Object.keys(MACRO).length>0;
+  const sugeridos = (hayMacroCargado && MACRO[srv] && MACRO[srv][diet] && MACRO[srv][diet][dia]) || [];
+  if(!sugeridos.length){
+    el.innerHTML = hayMacroCargado
+      ? `<div class="macro-sug-vacio">El cuadro macro no tiene platos para ${DIETAS[diet]||diet} · ${dia} ${srv}.</div>`
+      : '';
+    return;
+  }
+  const filas = sugeridos.map(r=>{
+    const key = buscarRecetaKey(r);
+    if(key){
+      const yaEsta = comboRecetas.includes(key);
+      return `<div class="macro-sug-item ${yaEsta?'agregado':''}">
+        <span>${r}</span>
+        ${yaEsta?'<span class="macro-sug-ok">✓ agregado</span>':`<button class="btn btn-s" style="font-size:10px;padding:2px 6px" onclick="agregarSugerenciaMacro('${key.replace(/'/g,"\\'")}')">+ agregar</button>`}
+      </div>`;
+    }
+    return `<div class="macro-sug-item sin-receta"><span>${r}</span><span class="macro-sug-warn">⚠ sin receta en la base</span></div>`;
+  }).join('');
+  el.innerHTML = `<div class="macro-sug-box">
+    <div class="macro-sug-titulo">📋 El cuadro macro dice para ${DIETAS[diet]||diet} · ${dia} ${srv}:</div>
+    ${filas}
+  </div>`;
+}
+
+function agregarSugerenciaMacro(nombre){
+  if(!REC[nombre]) return;
+  if(!comboRecetas.includes(nombre)) comboRecetas.push(nombre);
+  renderComboActual();
+  renderSugerenciasMacro();
+}
+
 function renderGrilla(){
   const el = document.getElementById('grilla-menu');
   if(!el) return;
   const dietaKeys = Object.keys(DIETAS);
+  const hayMacroCargado = typeof MACRO!=='undefined' && MACRO && Object.keys(MACRO).length>0;
   const mapa = {};
   items.forEach(it=>{
     const k = it.dia+'|'+it.srv+'|'+it.diet;
@@ -1368,7 +1425,12 @@ function renderGrilla(){
               </div>
             </div>`).join('') + `</td>`;
         } else {
-          rows += `<td class="grilla-cell vacio" onclick="abrirCeldaGrilla('${dia}','${srv}','${dk}')" title="Agregar ${DIETAS[dk]} — ${dia} ${srv}">+</td>`;
+          const sugeridos = (hayMacroCargado && MACRO[srv] && MACRO[srv][dk] && MACRO[srv][dk][dia]) || [];
+          if(sugeridos.length){
+            rows += `<td class="grilla-cell vacio con-sugerencia" onclick="abrirCeldaGrilla('${dia}','${srv}','${dk}')" title="El cuadro macro sugiere ${sugeridos.length} plato(s) para ${DIETAS[dk]} — ${dia} ${srv}: ${sugeridos.join(', ').replace(/"/g,'&quot;')}">📋 ${sugeridos.length}</td>`;
+          } else {
+            rows += `<td class="grilla-cell vacio" onclick="abrirCeldaGrilla('${dia}','${srv}','${dk}')" title="Agregar ${DIETAS[dk]} — ${dia} ${srv}">+</td>`;
+          }
         }
       });
       rows += '</tr>';
@@ -1910,6 +1972,18 @@ function buscarReceta(nombre){
     if(normKey(k)===nk) return REC[k];
   }
   return undefined;
+}
+
+// Igual que buscarReceta pero devuelve el NOMBRE (clave real en REC), no el objeto —
+// lo necesitamos para poder agregar la receta sugerida por el cuadro macro al combo actual.
+function buscarRecetaKey(nombre){
+  if(REC[nombre]) return nombre;
+  const nk = normKey(nombre);
+  if(!nk) return null;
+  for(const k of Object.keys(REC)){
+    if(normKey(k)===nk) return k;
+  }
+  return null;
 }
 
 function getMerma(n){const nl=n.toLowerCase();for(const[k,v] of Object.entries(mermas)){if(nl.includes(k))return v/100;}return 0;}
