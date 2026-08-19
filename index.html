@@ -88,7 +88,8 @@ select:focus,input:focus{outline:2px solid var(--azul);border-color:transparent}
 /* Grilla de menú (día×turno × dieta) */
 .grilla-wrap{overflow:auto;border:1px solid var(--borde);border-radius:var(--radio);background:var(--blanco);max-height:72vh}
 .grilla-tabla{border-collapse:separate;border-spacing:0;font-size:11px;width:max-content}
-.grilla-tabla th{background:var(--fondo);color:var(--gris);font-weight:700;text-transform:uppercase;letter-spacing:.03em;padding:6px 5px;border-bottom:1px solid var(--borde);border-right:1px solid var(--borde);position:sticky;top:0;z-index:2;white-space:nowrap;font-size:10px}
+.grilla-tabla th{background:var(--fondo);color:var(--gris);font-weight:700;text-transform:uppercase;letter-spacing:.03em;padding:6px 5px;border-bottom:1px solid var(--borde);border-right:1px solid var(--borde);position:sticky;top:0;z-index:2;font-size:10px}
+.grilla-tabla th:not(.grilla-corner):not(.grilla-rowlabel){white-space:normal;width:104px;min-width:104px;max-width:104px;line-height:1.2;vertical-align:bottom;text-align:center}
 .grilla-tabla th.grilla-corner{left:0;z-index:3;text-transform:none;font-size:11px}
 .grilla-tabla th.grilla-rowlabel{position:sticky;left:0;z-index:1;background:var(--azul-claro);color:var(--azul-txt);text-align:left;padding:6px 8px;text-transform:none;font-weight:600;white-space:nowrap}
 .grilla-tabla th.grilla-rowlabel small{font-weight:500;color:var(--gris)}
@@ -742,293 +743,332 @@ document.addEventListener('DOMContentLoaded',()=>{
 const MACRO = {
   Almuerzo:{
     g:{
-      Lunes:['Sopa crema de verduras','Muslito de pollo al horno','Lasagna de verduras','Papas al horno','Budín de brócoli'],
-      Martes:['Roll de queso y brócoli','Bife de chorizo con salsa demiglás','Calabaza noisette','Puré Gratinado'],
-      Miércoles:['Quesadilla','Matambre de ternera','Papas a la crema'],
-      Jueves:['Roll de queso y brócoli','Trucha salmonada','Papines salteados','Wok de verduras'],
-      Viernes:['Sopa de calabaza','Lomo al champignon','Budín de brócoli'],
-      Sábado:['Guiso de lentejas'],
-      Domingo:['Rotolo con estofado'],
-    },
-    l:{
-      Lunes:['Sopa crema de verduras','Wok de tirabuzón'],
-      Martes:['Sopa de Arroz','Tortilla de espinaca'],
-      Miércoles:['Sopa de calabaza','Risotto de calabaza'],
-      Jueves:['Sopa de Arroz','Creppe de espinaca','Salsa blanca'],
-      Viernes:['Sopa de calabaza','Creppe de espinaca','Wok de verduras'],
-      Sábado:['Sopa de avena','Tarta de verduras'],
-      Domingo:['Sopa crema de verduras','Rotolo con salsa blanca'],
-    },
-    lc:{
-      Lunes:['Lomo grillado'],Martes:['Pata muslo grillada'],Miércoles:['Pata muslo grillada'],
-      Jueves:['Medallón de pollo al horno'],Viernes:['Lomo grillado'],
-      Sábado:['Pata muslo grillada'],Domingo:['Medallón de pollo al horno'],
-    },
-    n:{
-      Lunes:['Sopa crema de verduras','Muslito de pollo al horno','Puré de calabaza'],
-      Martes:['Roll de queso y brócoli','Bife de chorizo con salsa demiglás','Calabaza noisette','Puré Gratinado'],
-      Miércoles:['Sopa de calabaza','Matambre de ternera','Verduras al horno'],
-      Jueves:['Medallón de pollo al horno','Papines salteados','Wok de verduras'],
-      Viernes:['Sopa de calabaza','Lomo al champignon','Puré Gratinado'],
-      Sábado:['Pizza de jamón y queso'],Domingo:['Rotolo con salsa blanca'],
-    },
-    a:{
-      Lunes:['Sopa crema de verduras','Muslito de pollo al horno','Lasagna de verduras','Papas al horno'],
-      Martes:['Roll de queso y brócoli','Bife de chorizo con salsa demiglás','Calabaza noisette','Puré Gratinado'],
-      Miércoles:['Quesadilla','Matambre de ternera','Papas a la crema'],
-      Jueves:['Trucha salmonada','Papines salteados','Wok de verduras'],
-      Viernes:['Sopa de calabaza','Lomo al champignon','Puré Gratinado'],
-      Sábado:['Pizza de jamón y queso'],Domingo:['Guiso de lentejas'],
-    },
-    b1:{
-      Lunes:['Lomo grillado','Vitina','Puré de boniato'],
-      Martes:['Medallón de pollo al horno','Fideos munición','Puré de boniato'],
-      Miércoles:['Medallón de pollo al horno','Puré de calabaza'],
-      Jueves:['Lomo grillado','Puré de papas general'],
-      Viernes:['Medallón de pollo al horno','Puré de verduras enriquecido'],
-      Sábado:['Medallón de pollo al horno','Vitina'],
-      Domingo:['Medallón de pollo al horno','Puré de Papa y Calabaza'],
-    },
-    b2:{
-      Lunes:['Lomo grillado','Puré de calabaza'],Martes:['Pata muslo grillada','Puré de papa liviano'],
-      Miércoles:['Pata muslo grillada','Puré de calabaza'],Jueves:['Lomo grillado','Puré de papas general'],
-      Viernes:['Medallón de pollo al horno','Puré de verduras enriquecido'],
-      Sábado:['Pata muslo grillada','Fideos munición'],
-      Domingo:['Medallón de pollo al horno','Puré de Papa y Calabaza'],
+      Lunes:["Sopa crema de verduras","Muslitos de pollo al horno (x2)","Lasaña de berenjenas","Papas al horno","Bavaroise de anana"],
+      Martes:["Empanada capresse","Bife de chorizo con panceta cortado en trozo tipo estofado","Noisette de calabaza","Puré gratinado","Pancake de arandanos con salsa de frutos rojos"],
+      Miércoles:["Quesadilla de palta","Matambre","Papas a la crema","Brócoli hervido","Pavlova"],
+      Jueves:["Roll de queso y brócoli","Trucha salmonada","Dill de limón","Papines salteados","Wok de verduras","Mousse de maracuyá"],
+      Viernes:["Sopa de calabaza, curry y jengibre con leche de coco","Lomo con hongos","Budín de queso","Torreja de espinaca","Fingers de manzana"],
+      Sábado:["Empanada de ternera braseada (tamaño normal)","Guiso de lenteja","Mousse de chocolate"],
+      Domingo:["Empanada de queso y cebolla (tamaño normal)","Rotolo con estofado","Manzana asada"],
     },
     dbt:{
-      Lunes:['Sopa crema de verduras','Muslito de pollo al horno','Lasagna de verduras','Papas al horno'],
-      Martes:['Roll de queso y brócoli','Bife de chorizo con salsa demiglás','Calabaza noisette','Puré Gratinado'],
-      Miércoles:['Quesadilla','Matambre de ternera','Papas a la crema'],
-      Jueves:['Roll de queso y brócoli','Trucha salmonada','Creppe de espinaca','Wok de verduras'],
-      Viernes:['Sopa de calabaza','Lomo al champignon','Budín de brócoli'],
-      Sábado:['Guiso de lentejas'],Domingo:['Rotolo con estofado'],
+      Lunes:["Sopa crema de verduras","Muslitos de pollo al horno (x2)","Lasaña de berenjenas","Papas al horno","Flan casero sin azúcar y sin caramelo"],
+      Martes:["Empanada capresse","Pata muslo grillada","Tortilla de espinaca","Salteado de berenjenas y tomate","Calabazas noisette","Aspic de frutas (sin azúcar)"],
+      Miércoles:["Quesadilla de palta","Matambre","Papas a la crema","Brócoli hervido","Flan industrial vainilla sin azúcar"],
+      Jueves:["Rol de queso y brócoli","Trucha salmonada","Dill de limón","Tortilla de zanahoria y calabaza (x1) y tortilla de zucchini y zapallito(x1)","Wok de verduras","Manzana asada"],
+      Viernes:["Sopa de calabaza, curry y jengibre con leche de coco","Lomo con hongos","Budín de queso","Torreja de espinaca","Wok de verduras","Yogurt natural s/endulzar con durazno y ciruela asadas"],
+      Sábado:["Empanada de ternera braseada (tamaño normal)","Guiso de lenteja","Durazno en almibar sin azucar"],
+      Domingo:["Empanada de queso y cebolla (tamaño normal)","Rotolo con estofado","Compota de pelón y ciruela sin azúcar"],
     },
-    bcb:{
-      Lunes:['Sopa crema de verduras','Muslito de pollo al horno','Lasagna de verduras','Papas al horno'],
-      Martes:['Roll de queso y brócoli','Bife de chorizo con salsa demiglás','Calabaza noisette','Puré Gratinado'],
-      Miércoles:['Sopa de calabaza','Matambre con papas a la crema'],
-      Jueves:['Sopa de Arroz','Medallón de pollo al horno','Papines salteados','Wok de verduras'],
-      Viernes:['Sopa de calabaza','Lomo grillado','Puré Gratinado'],
-      Sábado:['Guiso de lentejas'],Domingo:['Rotolo con estofado'],
+    l:{
+      Lunes:["Sopa crema de verduras","Tallarines con espinaca y limon","Flan casero sin caramelo"],
+      Martes:["Sopa de arroz","Tortilla de espinaca","Salteado de berenjenas y tomate","Aspic de frutas"],
+      Miércoles:["Sopa crema de calabaza","Risotto de calabaza","Flan industrial vainilla"],
+      Jueves:["Sopa de arroz","Tortilla de zanahoria y calabaza (x1) y tortilla de zucchini y zapallito(x1)","Salsa blanca (ambos)","Espárrago y zanahoria salteada","Manzana asada"],
+      Viernes:["Sopa de calabaza","Crepe de espinaca y ricotta","Wok de verduras","Yogurt natural con durazno y ciruela asadas"],
+      Sábado:["Sopa de avena","Tarta de verduras ralladas","Durazno en almíbar"],
+      Domingo:["Sopa de verduras cubo","Rotolo con salsa blanca","Compota de pelón y ciruela"],
     },
-    veg:{
-      Lunes:['Sopa crema de verduras','Wok de tirabuzón'],
-      Martes:['Sopa de Arroz','Tortilla de espinaca','Calabaza noisette'],
-      Miércoles:['Quesadilla','Hamburguesa vegana','Papas a la crema'],
-      Jueves:['Roll de queso y brócoli','Creppe de espinaca','Salsa blanca','Papines salteados'],
-      Viernes:['Sopa de calabaza','Creppe de espinaca','Wok de verduras'],
-      Sábado:['Sopa de avena','Tarta de verduras'],
-      Domingo:['Empanada de queso y cebolla','Rotolo con salsa blanca'],
+    lc:{
+      Lunes:["Bife de chorizo / patamuslo grillada"],
+      Martes:["Pata muslo grillada"],
+      Miércoles:["Pata muslo grillada"],
+      Jueves:["Medallón de pollo"],
+      Viernes:["Pata muslo grillada"],
+      Sábado:["Pata muslo grillada"],
+      Domingo:["Medallón de pollo"],
+    },
+    cel:{
+      Lunes:["Lomo con salsa de puerro","Puré de papas","Fideos con aceite y queso","Helado"],
+      Martes:["Patamuslo a la plancha","Pure de papa","Patamuslo","Arroz con salsa al curry","Fruta"],
+      Miércoles:["Pechuga grillada con sorrentinos y salsa de hongos","Polenta cremosa","Flan comercial manfrey"],
+      Jueves:["Salteado de pollo con salsa de hongos","Puré de papa","Pure de calabaza","Ñoquis con senda y oliva","Durazno en almibar"],
+      Viernes:["Milanesa bcb puré gratinado y calabaza horno con aceite","Arroz","Helado"],
+      Sábado:["Tallarines","Filetto , bifecitos de pollo","Tarta de zapallitos","Batata y queso"],
+      Domingo:["Sorrentinos con crema","Verduras al wok liviano y bife de pollo","Fruta"],
     },
     ast:{
-      Lunes:['Lomo grillado','Arroz crudo'],Martes:['Pata muslo grillada','Puré de papa liviano'],
-      Miércoles:['Pata muslo grillada','Polenta cremosa'],Jueves:['Lomo grillado','Ñoquis'],
-      Viernes:['Pata muslo grillada','Sorrentinos de Jamón y Queso'],
-      Sábado:['Pata muslo grillada','Capelettis cocidos'],
-      Domingo:['Medallón de pollo al horno','Polenta cremosa'],
+      Lunes:["Bife de chorizo","Arroz","Queso senda y aceite","Gelatina"],
+      Martes:["Pata muslo puré de papa liviano","Aspic de frutas"],
+      Miércoles:["Pata muslo","Polenta cremosa","Dulce de membrillo y queso"],
+      Jueves:["Medallón de pollo","Ñoquis con queso senda y aceite","Manzana asada"],
+      Viernes:["Pata muslo grillado","Sorrentinos de 3 quesos","Fingers de manzana"],
+      Sábado:["Pata muslo grillada","Capeletis secos","Aceite y queso","Gelatina"],
+      Domingo:["Medallón grillado","Polenta cremosa","Aceite y queso","Queso y dulce de membrillo"],
     },
-    sl:{
-      Lunes:['Sopa crema de verduras','Puré de papa liviano'],
-      Martes:['Sopa de Arroz','Puré de verduras enriquecido'],
-      Miércoles:['Sopa de calabaza','Puré de calabaza'],
-      Jueves:['Sopa de Arroz','Puré de papa y zanahoria enriquecido'],
-      Viernes:['Sopa de calabaza','Puré de verduras enriquecido'],
-      Sábado:['Sopa de avena','Puré de calabaza enriquecido'],
-      Domingo:['Sopa crema de verduras','Puré de Papa y Calabaza'],
+    b1:{
+      Lunes:["Mini bife de chorizo","Vitina c/aceite (y caldo) bebe","Puré de banana"],
+      Martes:["Mini pollo","Fideos munición c/aceite bebe","Puré de compota de manzana"],
+      Miércoles:["Mini pollo","Puré de calabaza c/aceite bebe","Puré de banana"],
+      Jueves:["Mini medallón de pollo","Puré de papa c/aceite bebe","Puré de manzana"],
+      Viernes:["Mini pollo","Puré de verduras c/aceite bebe","Puré de banana"],
+      Sábado:["Mini pollo","Vitina c/aceite bebe","Puré de banana"],
+      Domingo:["Mini pollo","Puré de papa y calabaza con aceite bebe","Puré de compota de manzanas bebe"],
+    },
+    b2:{
+      Lunes:["Mini bife de chorizo","Puré calabaza","Banana"],
+      Martes:["Pata muslo grillada","Puré de papa liviano","Fruta fresca"],
+      Miércoles:["Pata muslo grillada","Puré calabaza","Banana"],
+      Jueves:["Medallón de pollo","Puré de papa c/aceite bebe","Fruta fresca"],
+      Viernes:["Mini pollo","Puré de verduras","Banana"],
+      Sábado:["Pata muslo","Fideos c/senda y aceite","Fruta fresca"],
+      Domingo:["Mini medallón de pollo","Puré de papa y calabaza","Compota manzana"],
+    },
+    n:{
+      Lunes:["Sopa crema de verduras","Muslitos de pollo al horno (x2)","Puré de calabaza","Banana"],
+      Martes:["Empanada capresse","Bife de chorizo con panceta cortado en trozo tipo estofado","Noisette de calabaza","Puré gratinado","Pancake de arándanos"],
+      Miércoles:["Sopa crema de calabaza","Matambre con verduras al horno","Brócoli hervido","Pavlova"],
+      Jueves:["Medallón de pollo grillado","Papines salteados","Wok de verduras","Mousse maracuyá"],
+      Viernes:["Bife de chorizo","Puré gratinado","Torreja de espinaca","Fingers de manzana"],
+      Sábado:["Pizza jamón y queso","Mousse de chocolate"],
+      Domingo:["Rotolo con salsa mixta","Manzana asada"],
+    },
+    a:{
+      Lunes:["Sopa crema de verduras","Muslitos de pollo al horno (x2)","Lasaña de berenjenas","Papas al horno","Bavaroise de anana"],
+      Martes:["Empanada capresse","Bife de chorizo con panceta cortado en trozo tipo estofado","Noisette de calabaza","Puré gratinado","Pancake de arándanos"],
+      Miércoles:["Quesadilla de palta","Matambre","Papas a la crema","Brócoli hervido","Pavlova"],
+      Jueves:["Trucha salmonada","Dill de limón","Papines salteados","Wok de verduras","Mousse de maracuyá"],
+      Viernes:["Sopa de calabaza, curry y jengibre con leche de coco","Bife de chorizo","Puré gratinado","Torreja de espinaca","Fingers manzana"],
+      Sábado:["Pizza jamón y queso","Mousse de chocolate"],
+      Domingo:["Empanada de queso y cebolla","Rotolo con estofado","Manzana asada"],
     },
     ids4:{
-      Lunes:['Lomo grillado','Puré de papa enriquecido'],
-      Martes:['Bife de chorizo con salsa demiglás','Puré de verduras enriquecido'],
-      Miércoles:['Matambre de ternera','Puré de calabaza enriquecido'],
-      Jueves:['Pollo al curry + arroz + brócoli','Puré de papa y zanahoria enriquecido'],
-      Viernes:['Lomo al champignon','Puré de papa enriquecido'],
-      Sábado:['Pollo al curry + arroz + brócoli','Puré de verduras enriquecido'],
-      Domingo:['Rotolo con estofado','Puré de Papa y Calabaza enriquecido'],
+      Lunes:["Puré de bife de chorizo, crema de leche con salsa de soja","Puré de papa enriquecido","Flan casero sin caramelo"],
+      Martes:["Puré de bife de chorizo con salsa licuada","Puré de verduras enriquecido","Postre chocolate comercial"],
+      Miércoles:["Puré de matambre enriquecido","Puré de calabaza enriquecido","Flan industrial vainilla s/caramelo"],
+      Jueves:["Puré de pollo enriquecido","Puré de papa y zanahoria enriquecido","Mousse de maracuyá"],
+      Viernes:["Puré de bife de chorizo","Salsa de hongos licuada","Pure de papa enriquecido","Puré de gajos de manzana asados"],
+      Sábado:["Pué de pollo enriquecido","Puré de verduras de tarta ralladas enriquecido","Mousse de chocolate"],
+      Domingo:["Puré de estofado con salsa licuada","Puré de papa y calabaza enriquecido","Puré de compota de manzana"],
     },
     ids5:{
-      Lunes:['Lomo grillado','Puré de papa enriquecido'],
-      Martes:['Bife de chorizo con salsa demiglás','Puré de verduras enriquecido'],
-      Miércoles:['Pollo al curry + arroz + brócoli','Puré de calabaza enriquecido'],
-      Jueves:['Pollo al curry + arroz + brócoli','Puré de papa y zanahoria enriquecido'],
-      Viernes:['Lomo al champignon','Puré de papa enriquecido'],
-      Sábado:['Pollo al curry + arroz + brócoli','Puré de verduras enriquecido'],
-      Domingo:['Rotolo con estofado','Puré de Papa y Calabaza enriquecido'],
+      Lunes:["Puré de carne","Puré de papa enriquecido","Flan casero sin caramelo"],
+      Martes:["Puré de bife de chorizo con salsa colada","Puré de verduras enriquecido","Postre chocolate comercial"],
+      Miércoles:["Puré de matambre enriquecido","Puré de calabaza enriquecido","Flan industrial vainilla s/caramelo"],
+      Jueves:["Puré de pollo enriquecido con dill","Puré de papa y zanahoria enriquecido","Mousse de maracuyá"],
+      Viernes:["Puré de bife de chorizo con salsa licuada de hongos","Pure de papas enriquecido","Puré de gajos de manzana asados"],
+      Sábado:["Puré de pollo enriquecido","Puré de verduras tarta rallada enriquecido","Mousse de chocolate"],
+      Domingo:["Puré de estofado con salsa licuada","Puré de papa y calabaza enriquecido","Puré de compota de manzana"],
     },
     ids6:{
-      Lunes:['Lomo grillado','Puré de papa enriquecido'],
-      Martes:['Bife de chorizo con salsa demiglás','Puré de verduras enriquecido'],
-      Miércoles:['Matambre de ternera','Puré de calabaza enriquecido'],
-      Jueves:['Pollo al curry + arroz + brócoli','Puré de papa y zanahoria enriquecido'],
-      Viernes:['Lomo al champignon','Puré de papa enriquecido'],
-      Sábado:['Pollo al curry + arroz + brócoli','Puré de verduras enriquecido'],
-      Domingo:['Rotolo con estofado','Puré de Papa y Calabaza enriquecido'],
+      Lunes:["Bife de chorizo picado","Crema de leche con salsa de soja","Pure de papa enriquecido","Flan casero sin caramelo"],
+      Martes:["Bife de chorizo picado","Salsa colada","Pure de verduras enriquecido","Postre chocolate comercial"],
+      Miércoles:["Matambre picado","Crema de leche","Puré de calabaza enriquecido","Flan industrial vainilla s/caramelo"],
+      Jueves:["Pollo picado","Dill de limón","Puré de papa y zanahoria enriquecido","Mousse de maracuyá"],
+      Viernes:["Bife de chorizo picada","Salsa de hongos licuada","Pure de papa enriquecido","Puré de gajos de manzana asados"],
+      Sábado:["Pollo picado","Puré de verduras tarta rallada enriquecido","Salsa blanca","Mousse de chocolate"],
+      Domingo:["Estofado picado","Salsa licuada","Puré de papa y calabaza enriquecido","Puré de compota de manzana"],
     },
     ids7:{
-      Lunes:['Lomo grillado','Puré de papa enriquecido'],
-      Martes:['Bife de chorizo con salsa demiglás','Puré de verduras enriquecido'],
-      Miércoles:['Matambre de ternera','Puré de calabaza enriquecido'],
-      Jueves:['Pollo al curry + arroz + brócoli','Puré de papa y zanahoria enriquecido'],
-      Viernes:['Lomo al champignon','Puré de papa enriquecido'],
-      Sábado:['Pata muslo grillada','Puré de verduras enriquecido'],
-      Domingo:['Rotolo con estofado','Puré de Papa y Calabaza'],
+      Lunes:["Bife de chorizo picado en cubitos","Crema de leche con salsa de soja","Pure de papa enriquecido","Flan casero sin caramelo"],
+      Martes:["Bife de chorizo picado en cubitos","Con salsa colada","Pure de verduras enriquecido","Postre chocolate comercial"],
+      Miércoles:["Matambre picado en cubitos","Crema de leche","Puré de calabaza enriquecido","Flan industrial vainilla s/caramelo"],
+      Jueves:["Pollo picado en cubitos","Dill de limón","Puré de papa y zanahoria","Mousse de maracuyá"],
+      Viernes:["Bife de chorizo en cubitos con hongos","Pure papas","Puré de gajos de manzana asados"],
+      Sábado:["Pata muslo","Pure de verduras enriquecido","Mousse de chocolate"],
+      Domingo:["Estofado picado en cubitos","Puré de papa y calabaza","Puré de compota de manzana"],
+    },
+    veg:{
+      Lunes:["Sopa crema de verduras","Tallarines con espinaca y limon","Bavariose de anana"],
+      Martes:["Sopa de arroz","Tortilla de espinaca con salteado de berenjenas y tomate","Noisette de calabaza","Pancake de arándanos"],
+      Miércoles:["Quesadilla de palta","Hamburguesa vegetariana","Papas a la crema y brócoli hervido","Pavlova"],
+      Jueves:["Roll de queso y brócoli","Tortilla de zanahoria y calabaza (x1) y tortilla de zucchini y zapallito(x1)","Salsa blanca (ambos)","Espárrago y zanahoria salteada","Papines salteados","Mousse maracuyá"],
+      Viernes:["Sopa de calabaza, curry y jengibre con leche de coco","Creppes de espinaca y ricotta","Wok de verduras","Fingers de manzana"],
+      Sábado:["Sopa de avena","Tarta de verduras ralladas","Mousse de chocolate"],
+      Domingo:["Empanada de queso y cebolla","Rotolo con salsa blanca","Manzana asada"],
+    },
+    bcb:{
+      Lunes:["Sopa crema de verduras","Muslitos de pollo al horno (x2)","Lasagna de berenjenas","Papas al horno","Bavaroise de anana"],
+      Martes:["Empanada capresse","Bife de chorizo con panceta cortado en trozo tipo estofado","Noisette de calabaza","Puré gratinado","Aspic de frutas"],
+      Miércoles:["Sopa crema de calabaza","Matambre con papas a la crema y brócoli hervido","Flan industrial vainilla"],
+      Jueves:["Sopa de arroz","Medallón de pollo grillado","Papines salteados","Wok de verduras","Manzana asada"],
+      Viernes:["Sopa de calabaza","Lomo grillado","Puré gratinado","Torreja de espinaca","Fingers de manzana"],
+      Sábado:["Empanada de ternera braseada (tamaño normal)","Guiso de lenteja","Mousse de chocolate"],
+      Domingo:["Empanada de queso y cebolla (tamaño normal)","Rotolo con estofado","Manzana asada"],
+    },
+    sl:{
+      Lunes:["Sopa crema de verduras","Puré de calabaza","Gelatina"],
+      Martes:["Sopa de arroz","Puré de verduras","Aspic de frutas"],
+      Miércoles:["Sopa crema de calabaza","Puré de calabaza","Flan industrial vainilla"],
+      Jueves:["Sopa de arroz","Puré de papa y zanahoria","Manzana asada"],
+      Viernes:["Sopa de calabaza","Puré de verduras","Gelatina"],
+      Sábado:["Sopa de avena","Puré de calabaza y zanahoria","Durazno en almíbar"],
+      Domingo:["Sopa de verduras cubo","Puré de papa y calabaza","Gelatina"],
     },
     exc:{
-      Lunes:['Milanesa napolitana','Omelette','Verduras al horno'],
-      Martes:['Ñoquis','Omelette'],Miércoles:['Nugget de pollo','Ensalada rusa','Arroz crudo'],
-      Jueves:['Fideos munición','Wok de verduras'],Viernes:['Salsa Filetto','Lomito de carne'],
-      Sábado:['Milanesa de pollo','Verduras al horno'],Domingo:['Papas al horno','Lomito de pollo'],
+      Lunes:["Milanesa","Omelette","Verduras al horno"],
+      Martes:["Ñoquis","Omelette","Calabaza, zanahoria y zapallitos al horno","Berenjenas y tomates salteados","Remolacha cocida"],
+      Miércoles:["Nugget de pollo","Ensalada de espárragos, zanahoria y huevo","Arroz","Remolacha cocida","Omelette"],
+      Jueves:["Fideos frescos","Remolacha, huevo, zanahoria cubo y espárragos","Wok de verduras","Brócoli hervido","Espárragos"],
+      Viernes:["Fileto","Lomito de carne con papas cubo","Fideos","Ensalada de zanahoria en rodajas,huevo, remolacha","Omelette","Wok de verduras"],
+      Sábado:["Mila de pollo","Verduras al horno (calabaza - zanahoria - papa)","Ensalada de lentejas con perejil"],
+      Domingo:["Papa horno","Lomito de pollo"],
     },
   },
   Cena:{
     g:{
-      Lunes:['Sopa crema de espárragos','Quiche Lorraine','Espárragos gratinados'],
-      Martes:['Sopa Munición','Creppe de salmón','Salsa blanca'],
-      Miércoles:['Sopa crema de verduras','Pollo al curry + arroz + brócoli'],
-      Jueves:['Sopa de calabaza','Milanesa napolitana','Puré de papas general'],
-      Viernes:['Sopa crema de espárragos','Tallarines mediterráneos'],
-      Sábado:['Sopa de Arroz','Lomo Strogonoff','Puré de papas general'],
-      Domingo:['Sopa de sémola','Pollo oriental','Timbal de arroz'],
-    },
-    l:{
-      Lunes:['Sopa de Arroz','Tarta de calabaza y queso','Espárragos gratinados','Chauchas salteadas'],
-      Martes:['Sopa Munición','Creppe de calabaza y zanahoria'],
-      Miércoles:['Sopa crema de verduras','Budín Tricolor','Salsa blanca','Papas a la crema'],
-      Jueves:['Sopa de sémola','Wok de tirabuzón'],
-      Viernes:['Sopa Munición','Budín de papa y zanahoria','Zanahorias caramelizadas'],
-      Sábado:['Sopa crema de verduras','Ravioles 3 quesos','Salsa blanca'],
-      Domingo:['Sopa de sémola','Flan de zanahoria','Flan de espinaca','Salsa blanca'],
-    },
-    lc:{
-      Lunes:['Pata muslo grillada'],Martes:['Lomo grillado'],Miércoles:['Pata muslo grillada'],
-      Jueves:['Pata muslo grillada'],Viernes:['Medallón de pollo al horno'],
-      Sábado:['Lomo grillado'],Domingo:['Lomo grillado'],
-    },
-    n:{
-      Lunes:['Sorrentinos de Jamón y Queso','Salsa Mixta'],
-      Martes:['Nugget de pollo','Puré de calabaza'],
-      Miércoles:['Pata muslo grillada','Fideos munición','Salsa Filetto'],
-      Jueves:['Milanesa napolitana','Puré de papas general'],
-      Viernes:['Medallón de pollo al horno','Tallarines mediterráneos'],
-      Sábado:['Lomito de carne','Papas al horno'],
-      Domingo:['Milanesa de pollo','Puré de calabaza'],
-    },
-    a:{
-      Lunes:['Sorrentinos de Jamón y Queso','Salsa Mixta'],
-      Martes:['Nugget de pollo','Puré de calabaza'],
-      Miércoles:['Pollo al curry + arroz + brócoli'],
-      Jueves:['Milanesa napolitana','Puré de papas general'],
-      Viernes:['Medallón de pollo al horno','Tallarines mediterráneos'],
-      Sábado:['Lomito de carne','Papas al horno'],
-      Domingo:['Milanesa de pollo','Puré de calabaza'],
-    },
-    b1:{
-      Lunes:['Pata muslo grillada','Puré de papa y zanahoria enriquecido'],
-      Martes:['Lomo grillado','Puré de zanahoria y calabaza enriquecido'],
-      Miércoles:['Pata muslo grillada','Vitina'],Jueves:['Pata muslo grillada','Polenta cremosa'],
-      Viernes:['Medallón de pollo al horno','Fideos munición'],
-      Sábado:['Lomo grillado','Puré de zanahoria y calabaza enriquecido'],
-      Domingo:['Lomo grillado','Puré de verduras enriquecido'],
-    },
-    b2:{
-      Lunes:['Pata muslo grillada','Tallarines secos'],
-      Martes:['Nugget de pollo','Puré de calabaza'],
-      Miércoles:['Pata muslo grillada','Fideos munición'],
-      Jueves:['Milanesa napolitana','Puré de papas general'],
-      Viernes:['Medallón de pollo al horno','Puré de Papa y Calabaza'],
-      Sábado:['Lomo grillado','Puré de zanahoria y calabaza enriquecido'],
-      Domingo:['Lomo grillado','Puré de verduras enriquecido'],
+      Lunes:["Sopa crema de espárragos","Tarta quiche lorraine","Espárragos y brócolis salteados","Ensalada de frutas"],
+      Martes:["Sopa munición","Creppe de salmón (2 unidades)","Salsa blanca","Alcaparras","Ralladura de limón","Cheese cake con frutos rojos"],
+      Miércoles:["Sopa de verduras en cubo","Pollo al curry","Arroz","Brócoli y zanahoria","Semillas","Frutas asadas con crema"],
+      Jueves:["Sopa crema de calabaza","Milanesa napolitana","Puré mixto","Deco hoja de perejil","Zócalo de chocolate"],
+      Viernes:["Sopa crema de espárragos","Tallarines mediterráneos","Isla flotante"],
+      Sábado:["Sopa de crema de verdura","Lomo strogonoff","Puré de papas general","Flan de dulce de leche"],
+      Domingo:["Sopa de sémola","Pollo oriental","Timbal de arroz","Zanahoria bastón","Semillas","Postre lincoln"],
     },
     dbt:{
-      Lunes:['Sopa crema de espárragos','Tarta de verduras','Espárragos gratinados','Chauchas salteadas'],
-      Martes:['Sopa Munición','Creppe de salmón','Salsa blanca'],
-      Miércoles:['Sopa crema de verduras','Pollo al curry + arroz + brócoli'],
-      Jueves:['Sopa de calabaza','Milanesa napolitana','Puré de papas general'],
-      Viernes:['Sopa crema de espárragos','Budín de papa y zanahoria','Zanahorias caramelizadas'],
-      Sábado:['Sopa crema de verduras','Lomo Strogonoff','Puré de zanahoria y calabaza enriquecido'],
-      Domingo:['Sopa de sémola','Pollo oriental','Timbal de arroz'],
+      Lunes:["Sopa crema de espárragos","Tarta naranja","Espárragos salteados","Chauchas salteadas","Ensalada de frutas"],
+      Martes:["Sopa munición","Creppe de salmón","Salsa blanca","Alcaparras","Ralladura de limón","Compota de manzana y pera s/a"],
+      Miércoles:["Sopa de verduras en cubo","Pollo al curry","Arroz","Brócoli, zanahoria","Semillas","Frutas asadas dbt"],
+      Jueves:["Sopa crema de calabaza","Milanesa napolitana","Puré mixto","Deco hoja de perejil","Fruta fresca"],
+      Viernes:["Sopa crema de espárragos","Medallón de pollo","Budín de papa y zanahoria (souffle)","Salteado de zanahoria, chauchas, espárragos","Aspic de frutas sin azúcar"],
+      Sábado:["Sopa de crema de verdura","Lomo strogonoff","Puré de calabaza y zanahoria","Compota de pera y manzana sin azúcar"],
+      Domingo:["Sopa de sémola","Pollo oriental","Timbal de arroz","Zanahoria bastón","Semillas activadas","Peras en almíbar s/a"],
     },
-    bcb:{
-      Lunes:['Sopa crema de espárragos','Quiche Lorraine'],
-      Martes:['Sopa Munición','Lomo grillado','Creppe de calabaza y zanahoria'],
-      Miércoles:['Sopa crema de verduras','Milanesa de pollo','Verduras al horno'],
-      Jueves:['Sopa de sémola','Milanesa napolitana','Puré de papas general'],
-      Viernes:['Sopa Munición','Tallarines mediterráneos'],
-      Sábado:['Sopa crema de verduras','Lomo Strogonoff','Puré de papas general'],
-      Domingo:['Sopa de sémola','Milanesa de pollo','Puré de calabaza'],
+    l:{
+      Lunes:["Sopa de arroz","Tarta naranja","Espárragos salteados","Chauchas salteadas","Gajos de manzana asada"],
+      Martes:["Sopa munición","Crepe de calabaza y zanahoria con masa verde (2 unidades)","Perejil deshidratado","Compota de manzana y pera"],
+      Miércoles:["Sopa de verduras en cubos","Budín tricolor","Salsa blanca","Papas española hervidas","Zanahoria en rodajas hervidas","Frutas asadas (pera y manzana)"],
+      Jueves:["Sopa de sémola","Fideos tirabuzón","Verduras al wok","Compota de manzana"],
+      Viernes:["Sopa munición","Budín de papa y zanahoria (soufflé)","Salteado de zanahoria, chauchas, espárragos","Aspic de frutas con azúcar"],
+      Sábado:["Sopa de arroz","Ravioles de espinaca ricota y parmesano","Salsa blanca","Compota de pera y manzana sin azúcar"],
+      Domingo:["Sopa de sémola","Flan de zanahoria","Flan de espinaca con salsa blanca","Deco: 1 espárrago y una remolacha","Peras en almíbar"],
     },
-    veg:{
-      Lunes:['Sopa crema de espárragos','Tarta de verduras','Espárragos gratinados'],
-      Martes:['Sopa de calabaza','Creppe de calabaza y zanahoria'],
-      Miércoles:['Sopa crema de verduras','Omelette','Arroz crudo'],
-      Jueves:['Sopa de calabaza','Hamburguesa vegana','Puré de papas general'],
-      Viernes:['Sopa Munición','Tallarines mediterráneos'],
-      Sábado:['Sopa crema de verduras','Ravioles 3 quesos','Salsa blanca'],
-      Domingo:['Sopa de sémola','Flan de zanahoria','Flan de espinaca','Salsa blanca'],
+    lc:{
+      Lunes:["Patamuslo grillada"],
+      Martes:["Bife de chorizo / medallón de pollo"],
+      Miércoles:["Pata muslo grillada"],
+      Jueves:["Pata muslo grillada"],
+      Viernes:["Medallón de pollo"],
+      Sábado:["Bife de chorizo /medallón de pollo"],
+      Domingo:["Bife de chorizo /medallón de pollo"],
+    },
+    cel:{
+      Lunes:["Pollo con tallarines con salsa filetto","Polenta","Batata y queso"],
+      Martes:["Ñoquis","Paiar de lomo","Puré mixto","Flan industrial"],
+      Miércoles:["Patamuslo","Omelette con queso y espárragos","Calabaza horno","Tallarine","Flan"],
+      Jueves:["Bifecitos de pollo con limón y perejil","Papas a la crema","Polenta","Flan industrial"],
+      Viernes:["Pollo con salsa de curry","Puré de papas","Tarta con ensalada","Membrillo y queso"],
+      Sábado:["Bife de lomo","Puré de papa","Arroz","Durazno en almibar"],
+      Domingo:["Milanesa","Timbal de arroz con cherrys y","Tallarines","Flan industrial"],
     },
     ast:{
-      Lunes:['Pata muslo grillada','Tallarines secos'],
-      Martes:['Lomo grillado','Zanahorias salteadas con arroz'],
-      Miércoles:['Pata muslo grillada','Sorrentinos de Jamón y Queso'],
-      Jueves:['Pata muslo grillada','Capelettis cocidos'],
-      Viernes:['Medallón de pollo al horno','Arroz crudo'],
-      Sábado:['Lomo grillado','Tallarines secos'],Domingo:['Lomo grillado','Arroz crudo'],
+      Lunes:["Pata muslo grillada","Tallarines secos don vicente","Aceite y queso tybo","Batata y queso"],
+      Martes:["Lomo grillado","Zanahorias salteadas y arroz","Gelatina"],
+      Miércoles:["Pata muslo grillada","Sorrentinos de 3 quesos","Aceite y queso tybo","Frutas asadas"],
+      Jueves:["Pata muslo grillada","Capeletis secos","Aceite y queso tybo","Queso y batata"],
+      Viernes:["Medallón de pollo","Arroz","Aceite y queso tybo","Gelatina"],
+      Sábado:["Lomo grillado","Tallarines frescos","Aceite y queso tybo","Aspic de compota de manzana"],
+      Domingo:["Lomo grillado","Arroz","Aceite y queso tybo","Fruta","Gelatina"],
     },
-    sl:{
-      Lunes:['Sopa de Arroz','Puré de papa y zanahoria enriquecido'],
-      Martes:['Sopa Munición','Puré de calabaza'],
-      Miércoles:['Sopa crema de verduras','Puré de zanahoria y calabaza enriquecido'],
-      Jueves:['Sopa de sémola','Puré de calabaza'],
-      Viernes:['Sopa Munición','Puré de Papa y Calabaza'],
-      Sábado:['Sopa crema de verduras','Puré de zanahoria y calabaza enriquecido'],
-      Domingo:['Sopa de Arroz','Puré de verduras enriquecido'],
+    b1:{
+      Lunes:["Mini patamuslo","Puré de papa y zanahoria con aceite bebe (120 g)","Puré de compota de manzana bebe"],
+      Martes:["Mini lomo","Pure de zanahoria y calabaza bebe (120 g)","Puré de manzana y pera bebe (compotas)"],
+      Miércoles:["Mini pata muslo","Vitina","Puré de banana"],
+      Jueves:["Mini pata muslo","Polenta bebe","Puré de banana"],
+      Viernes:["Mini medallón de pollo","Fideos munición","Puré de manzana"],
+      Sábado:["Mini lomo","Puré de calabaza y zanahoria","Puré de compota de manzana y pera bebe"],
+      Domingo:["Mini lomo","Puré de verduras c/aceite bebe (120 g)","Puré de banana"],
+    },
+    b2:{
+      Lunes:["Mini patamuslo","Tallarines secos don vicente","Aceite y queso tybo","Fruta fresca"],
+      Martes:["1 nugget de pollo","Puré de calabaza","Compota de manzana y pera"],
+      Miércoles:["Mini pata muslo","Fideos moñito don vicente","Aceite y queso tybo","Fruta fresca"],
+      Jueves:["Milanesa","Puré mixto","Deco: hoja de perejil fresco","Fruta fresca"],
+      Viernes:["Mini medallón de pollo","Puré de papa y calabaza","Fruta fresca"],
+      Sábado:["Mini lomo","Puré de calabaza y zanahoria","Fruta fresca"],
+      Domingo:["Mini lomo","Puré de verduras","Fruta fresca"],
+    },
+    n:{
+      Lunes:["Sorrentinos de jyq (5 unid)","Salsa mixta","Ensalada de frutas"],
+      Martes:["2 nuggets de pollo","Puré de calabaza","5 papas smile","Cheese cake"],
+      Miércoles:["Milanesa de pollo","Arroz","Brócoli","Flan de dulce de leche"],
+      Jueves:["Milanesa a la napolitana","Puré mixto","Deco: hoja de perejil","Zócalo de chocolate"],
+      Viernes:["Medallón de pollo","Tallarines mediterráneos","Fruta fresca"],
+      Sábado:["Lomito de carne","Papa horno","Flan de dulce de leche"],
+      Domingo:["Milanesa de pollo","Pure calabaza al horno gratinado","Sancorito de vainilla"],
+    },
+    a:{
+      Lunes:["Sorrentinos (7 unid)","Salsa mixta","Ensalada de frutas"],
+      Martes:["3 nuggets de pollo","Puré de calabaza","5 papas smile","Cheese cake"],
+      Miércoles:["Pollo al curry","Arroz","Brócoli y zanahorias","Semillas","Flan de dulce de leche"],
+      Jueves:["Milanesa a la napolitana","Puré mixto","Deco: hoja de perejil","Zócalo de chocolate"],
+      Viernes:["Medallón de pollo","Tallarines mediterráneos","Isla flotante"],
+      Sábado:["Lomito de carne","Papa horno","Flan de dulce de leche"],
+      Domingo:["Milanesa de pollo","Pure calabaza al horno gratinado","Sancorito de vainilla"],
     },
     ids4:{
-      Lunes:['Pollo al curry + arroz + brócoli','Salsa blanca','Puré de papa y zanahoria enriquecido'],
-      Martes:['Lomo grillado','Puré de calabaza enriquecido'],
-      Miércoles:['Pollo al curry + arroz + brócoli','Salsa blanca','Puré de zanahoria y calabaza enriquecido'],
-      Jueves:['Pollo al curry + arroz + brócoli','Polenta cremosa'],
-      Viernes:['Pollo al curry + arroz + brócoli','Salsa blanca','Puré de Papa y Calabaza enriquecido'],
-      Sábado:['Lomo Strogonoff','Puré de papa enriquecido'],
-      Domingo:['Pollo oriental','Salsa blanca','Puré de verduras enriquecido'],
+      Lunes:["Puré de pollo","Salsa blanca","Puré de zanahoria y papa enriquecido","Puré de compota de manzana"],
+      Martes:["Puré de lomo enriquecido","Puré de calabaza enriquecido","Puré de compota de manzana y pera"],
+      Miércoles:["Puré de pollo al curry","Salsa curry","Puré de calabaza y zanahoria enriquecido","Flan de dulce de leche"],
+      Jueves:["Puré de pollo","Salsa napolitana licuada","Polenta cremosa","Sancorito vainilla"],
+      Viernes:["Puré de pollo","Salsa blanca","Puré de papa y calabaza enriquecido","Sancorito ddl"],
+      Sábado:["Puré de lomo strogonoff","Puré de papa enriquecido","Flan de dulce de leche sin caramelo"],
+      Domingo:["Puré de pollo oriental","Salsa blanca","Puré de verduras enriquecido","Sancorito vainilla"],
     },
     ids5:{
-      Lunes:['Pollo al curry + arroz + brócoli','Salsa blanca','Tarta de verduras'],
-      Martes:['Lomo grillado','Puré de calabaza enriquecido'],
-      Miércoles:['Pollo al curry + arroz + brócoli','Salsa blanca','Puré de zanahoria y calabaza enriquecido'],
-      Jueves:['Pollo al curry + arroz + brócoli','Polenta cremosa'],
-      Viernes:['Pollo al curry + arroz + brócoli','Salsa blanca','Puré de Papa y Calabaza enriquecido'],
-      Sábado:['Lomo Strogonoff','Puré de papa enriquecido'],
-      Domingo:['Pollo oriental','Salsa blanca','Puré de verduras enriquecido'],
+      Lunes:["Puré de pollo","Salsa blanca","Budín de relleno de tarta naranja","Salsa mixta licuada","Puré de compota de manzana"],
+      Martes:["Puré de lomo enriquecido","Puré de calabaza enriquecido","Puré de compota de manzana y pera"],
+      Miércoles:["Puré de pollo al curry","Salsa curry","Puré de calabaza y zanahoria enriquecido","Flan de ddl"],
+      Jueves:["Puré de pollo","Salsa napolitana licuada","Polenta cremosa","Sancorito vainilla"],
+      Viernes:["Puré de pollo","Salsa blanca","Puré de papa y calabaza enriquecido","Sancorito ddl"],
+      Sábado:["Puré de lomo strogonoff","Puré de papa enriquecido","Flan de dulce de leche sin caramelo"],
+      Domingo:["Puré de pollo oriental","Salsa blanca","Puré de verduras enriquecido","Sancorito vainilla"],
     },
     ids6:{
-      Lunes:['Pollo al curry + arroz + brócoli','Salsa blanca','Tarta de verduras'],
-      Martes:['Lomo grillado','Salsa blanca','Puré de calabaza enriquecido'],
-      Miércoles:['Pollo al curry + arroz + brócoli','Salsa blanca','Puré de zanahoria y calabaza enriquecido'],
-      Jueves:['Pollo al curry + arroz + brócoli','Polenta cremosa'],
-      Viernes:['Pollo al curry + arroz + brócoli','Salsa blanca','Puré de Papa y Calabaza enriquecido'],
-      Sábado:['Lomo Strogonoff','Puré de papa enriquecido'],
-      Domingo:['Pollo oriental','Salsa blanca','Puré de verduras enriquecido'],
+      Lunes:["Pollo picado","Salsa blanca","Budín de relleno de tarta naranja","Salsa mixta licuada","Puré de compota de manzana"],
+      Martes:["Lomo picado","Salsa blanca","Puré de calabaza enriquecido","Puré de compota de manzana y pera"],
+      Miércoles:["Pollo al curry picado","Salsa curry","Puré de calabaza y zanahoria enriquecido","Flan de dulce de leche"],
+      Jueves:["Pollo picado","Salsa napolitana licuada","Polenta cremosa","Sancorito vainilla"],
+      Viernes:["Pollo picado","Salsa blanca","Puré de papa y calabaza enriquecido","Sancorito ddl"],
+      Sábado:["Lomo strogonoff picado","Crema","Puré de papa enriquecido","Flan de dulce de leche sin caramelo"],
+      Domingo:["Pollo oriental picado","Salsa blanca","Puré de verduras enriquecido","Sancorito vainilla"],
     },
     ids7:{
-      Lunes:['Pata muslo grillada','Tarta de verduras'],
-      Martes:['Lomo grillado','Salsa blanca','Puré de calabaza enriquecido'],
-      Miércoles:['Pollo al curry + arroz + brócoli','Puré de zanahoria y calabaza enriquecido'],
-      Jueves:['Milanesa napolitana','Puré de papas general'],
-      Viernes:['Pollo al curry + arroz + brócoli','Salsa blanca','Puré de Papa y Calabaza'],
-      Sábado:['Lomo Strogonoff','Puré de papa liviano'],
-      Domingo:['Pollo oriental','Salsa blanca','Puré de verduras enriquecido'],
+      Lunes:["Pata muslo grillada","Budín de relleno de tarta naranja","Salsa mixta licuada","Puré de compota manzana"],
+      Martes:["Lomo picado","Salsa blanca","Puré de calabaza enriquecido","Compota de manzana y pera"],
+      Miércoles:["Pollo al curry picado","Salsa curry","Puré de calabaza y zanahoria enriquecido","Flan de dulce de leche"],
+      Jueves:["Pata muslo grillada","Puré mixto","Sancorito vainilla"],
+      Viernes:["Pollo picado","Salsa blanca","Puré de papa y calabaza","Sancorito ddl"],
+      Sábado:["Lomo strogonoff picado","Crema","Puré de papa liviano","Flan de dulce de leche sin caramelo"],
+      Domingo:["Pollo oriental picado","Salsa blanca","Puré de verduras","Sancorito vainilla"],
+    },
+    veg:{
+      Lunes:["Sopa crema de espárragos","Tarta naranja","Espárragos salteados","Chauchas salteadas","Ensalada de frutas"],
+      Martes:["Sopa munición","Crepe de calabaza y zanahoria con masa verde (2 unidades)","Perejil deshidratado","Cheese cake"],
+      Miércoles:["Sopa de verduras en cubo","Huevo duro molde","Arroz","Brócoli y zanahoria semillas","Flan de dulce de leche"],
+      Jueves:["Sopa crema de calabaza","Hamburguesa vegana napolitana","Puré mixto","Deco: hoja de perejil","Zócalo de chocolate"],
+      Viernes:["Sopa munición","Tallarines mediterráneos","Isla flotante"],
+      Sábado:["Sopa de crema de verdura","Ravioles de espinaca ricota y parmersano","Salsa blanca","Flan de dulce de leche sin caramelo"],
+      Domingo:["Sopa de sémola","Flan de zanahoria","Flan de espinaca con salsa blanca","Sancorito vainilla"],
+    },
+    bcb:{
+      Lunes:["Sopa crema de espárragos","Patamuslo grillada","Quiché lorraine (sin hongos!)","Gajo de manzana asada"],
+      Martes:["Sopa munición","Lomo grillado","Crepe de calabaza y zanahoria con masa verde (2 unidades)","Perejil deshidratado","Sancorito"],
+      Miércoles:["Sopa de verduras en cubo","Milanesa de pollo con crema de choclo","Verduras horno","Flan de dulce de leche"],
+      Jueves:["Sopa de sémola","Milanesa a la napolitana","Puré mixto","Zócalo de chocolate"],
+      Viernes:["Sopa munición","Tallarines mediterráneos","Isla flotante"],
+      Sábado:["Sopa de crema de verdura","Lomo strogonoff","Puré de papas general","Flan de dulce de leche"],
+      Domingo:["Sopa de sémola","Milanesa de pollo","Puré calabaza al horno gratinado","Sancorito de vainilla"],
+    },
+    sl:{
+      Lunes:["Sopa de arroz","Puré de papas y zanahoria","Gajo de manzana asada"],
+      Martes:["Sopa munición","Puré puré de calabaza","Compota de manzana y pera"],
+      Miércoles:["Sopa de verduras en cubo","Puré de calabaza y zanahoria","Gelatina"],
+      Jueves:["Sopa de sémola","Puré de calabaza","Compota de manzana"],
+      Viernes:["Sopa de munición","Puré de papa y calabaza","Gelatina"],
+      Sábado:["Sopa de arroz","Puré de calabaza y zanahoria","Gelatina"],
+      Domingo:["Sopa de arroz","Puré de verduras","Peras en almíbar"],
     },
     exc:{
-      Lunes:['Omelette','Espárragos gratinados'],
-      Martes:['Milanesa napolitana','Sorrentinos de Jamón y Queso','Ensalada remolacha y huevo'],
-      Miércoles:['Omelette','Verduras al horno','Ñoquis'],
-      Jueves:['Sorrentinos de Jamón y Queso','Ensalada de lenteja y huevo'],
-      Viernes:['Sorrentinos de Jamón y Queso'],
-      Sábado:['Sorrentinos de Jamón y Queso','Omelette'],
-      Domingo:['Ravioles 3 quesos','Verduras al horno'],
+      Lunes:["Omelette -","Con queso o champiñones","Espárragos","Zanahoria","Y papa"],
+      Martes:["Milanesa de carne - sorrentinos jyq - ensalada de remolacha y huevo"],
+      Miércoles:["Omelette - (zucchini) - ñoquis","Sandwich de milanesa de carne con papas cubo"],
+      Jueves:["Sorrentinos - ensalada de lenteja y huevo","Lomito de pollo con papas cubo"],
+      Viernes:["Ensalada de calabaza, chaucha y espárragos- sorrentinos jamón y queso"],
+      Sábado:["Sorrentinos j y q - omelette - ensalada de papa, chaucha y remolacha cubo"],
+      Domingo:["Ravioles 3 quesos - verduras al horno (papa, calabaza, zucchini)"],
     },
-  }
+  },
 };
 
 // ── Aplica un cuadro macro subido por el usuario (si existe) sobre el MACRO por defecto ──
@@ -1477,7 +1517,7 @@ function renderGrilla(){
     if((mapa[dia+'|'+srv+'|'+dk]||[]).length) llenos++;
   })));
 
-  const thead = '<tr><th class="grilla-corner">Día / turno</th>' + dietaKeys.map(dk=>`<th title="${DIETAS[dk]}">${dk}</th>`).join('') + '</tr>';
+  const thead = '<tr><th class="grilla-corner">Día / turno</th>' + dietaKeys.map(dk=>`<th title="${DIETAS[dk]}">${DIETAS[dk]||dk}</th>`).join('') + '</tr>';
   let rows='';
   DIAS_ORDEN.forEach(dia=>{
     ['Almuerzo','Cena'].forEach(srv=>{
@@ -3063,10 +3103,16 @@ function quitarTildes(s){
 function normFila(s){
   return quitarTildes(s||'').toUpperCase().replace(/\s+/g,' ').trim();
 }
+// Filas que reconocemos a propósito pero descartamos sin avisar (encabezados, colaciones, etc.)
+// — distinto de una fila que no matchea nada y que sí vale la pena reportarle a alguien.
+function esFilaIgnoradaIntencional(label){
+  const n = normFila(label);
+  return MACRO_ROW_IGNORE.some(x=>n===x || n.startsWith(x));
+}
 function matchFilaMacro(label){
   const n = normFila(label);
   if(!n) return null;
-  if(MACRO_ROW_IGNORE.some(x=>n===x || n.startsWith(x))) return null;
+  if(esFilaIgnoradaIntencional(label)) return null;
   for(const [pat,key,modo] of MACRO_ROW_MAP){ if(n===pat) return {key,modo}; }
   for(const [pat,key,modo] of MACRO_ROW_PREFIX){ if(n.startsWith(pat)) return {key,modo}; }
   return null;
@@ -3151,11 +3197,27 @@ async function procesarCuadroMacro(input){
         .join('\n');
     }
 
+    // Igual que arriba pero para texto de una sola línea (etiquetas de fila, nombres de
+    // día): un <br> tiene que convertirse en un ESPACIO, no desaparecer sin dejar rastro.
+    // Sin esto "PROTEÍNA<br>GENERAL" se leía como "PROTEÍNAGENERAL" pegado y la fila no
+    // matcheaba contra MACRO_ROW_MAP — esa fila (y su equivalente ENTRADA GENERAL) se
+    // perdían enteras aunque el resto del cuadro se leyera bien.
+    function textoCeldaPlano(c){
+      // Ojo: acá "PROTEÍNA" y "GENERAL" no vienen separados por <br> sino en dos
+      // <p> distintos dentro de la misma celda — hay que unir los párrafos con
+      // espacio explícitamente, si no, textContent los pega sin nada en el medio.
+      const clone = c.cloneNode(true);
+      clone.querySelectorAll('br').forEach(br=>br.replaceWith(' '));
+      const ps = [...clone.querySelectorAll('p')];
+      const bruto = ps.length ? ps.map(p=>p.textContent).join(' ') : clone.textContent;
+      return bruto.replace(/\s+/g,' ').trim();
+    }
+
     tablas.forEach(tabla=>{
       [...tabla.querySelectorAll('tr')].forEach(fila=>{
         const celdas = [...fila.querySelectorAll('td,th')];
         if(!celdas.length) return;
-        const textos = celdas.map(c=>c.textContent.replace(/\s+/g,' ').trim());
+        const textos = celdas.map(textoCeldaPlano);
         const textosCrudos = celdas.map(textoCeldaConSaltos);
         const primera = normFila(textos[0]);
 
@@ -3173,7 +3235,9 @@ async function procesarCuadroMacro(input){
 
         const m = matchFilaMacro(textos[0]);
         if(!m){
-          if(textos[0] && textos[0].length<60) filasIgnoradas.add(textos[0]);
+          // Sólo avisamos de las filas que NO reconocemos en absoluto — las que están
+          // a propósito en MACRO_ROW_IGNORE (colaciones, fibra, etc.) no son un problema.
+          if(textos[0] && textos[0].length<60 && !esFilaIgnoradaIntencional(textos[0])) filasIgnoradas.add(textos[0]);
           return;
         }
         filasReconocidas++;
