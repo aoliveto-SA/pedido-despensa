@@ -483,6 +483,7 @@ tr:hover td{background:var(--fondo)}
     </div>
     <div id="logCuadroMacro" style="margin-top:12px; font-size:12px; max-height:280px; overflow-y:auto; padding:8px; display:none; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:6px; color:#166534;"></div>
     <div style="margin-top:10px" id="macroOverrideInfo"></div>
+    <div id="macroHistorialBox" style="margin-top:10px"></div>
   </div>
 
   <div class="card" style="background:linear-gradient(135deg,#f0fdf4,#eff6ff);border-color:#bbf7d0">
@@ -547,8 +548,6 @@ tr:hover td{background:var(--fondo)}
       <button class="btn btn-s" style="font-size:12px" onclick="if(confirm('¿Borrar todo el menú cargado?')){items=[];renderLista();guardarEstado();mostrarNotif('Menú borrado');}">Borrar menú</button>
       <button class="btn btn-s" style="font-size:12px" onclick="if(confirm('¿Borrar todas las mermas?')){mermas={};renderMermas();guardarEstado();mostrarNotif('Mermas borradas');}">Borrar mermas</button>
       <button class="btn btn-s" style="font-size:12px" onclick="if(confirm('¿Borrar todos los proveedores?')){proveedores=[];cronOverrides={};renderProveedores();renderCronograma();guardarEstado();mostrarNotif('Proveedores borrados');}">Borrar proveedores</button>
-
-      <button class="btn btn-s" style="font-size:12px" onclick="if(confirm('¿Restaurar el cuadro macro original (borrar el cuadro subido)?')){localStorage.removeItem('SA_MACRO_OVERRIDE');mostrarNotif('Cuadro macro restaurado al original — recargá la página');}">Restaurar cuadro macro original</button>
     </div>
   </div>
 
@@ -1033,10 +1032,14 @@ const MACRO = {
 };
 
 // ── Aplica un cuadro macro subido por el usuario (si existe) sobre el MACRO por defecto ──
-function aplicarMacroOverride(){
+let macroOverride = null; // último cuadro macro subido (parseado), sincronizado por Firestore para todo el equipo
+let macroOverrideNombreArchivo = ''; // nombre del .docx que generó la versión activa
+let macroHistorial = []; // últimas versiones anteriores del cuadro macro, para poder volver atrás
+// Aplica un cuadro macro subido (parseado desde el Word) sobre el objeto MACRO de base,
+// pisando sólo los servicio/dieta/día que trae "ov" y dejando el resto como estaba.
+function aplicarMacroOverride(ov){
+  if(!ov) return;
   try{
-    const ov = JSON.parse(localStorage.getItem('SA_MACRO_OVERRIDE')||'null');
-    if(!ov) return;
     Object.keys(ov).forEach(srv=>{
       if(!MACRO[srv]) MACRO[srv]={};
       Object.keys(ov[srv]).forEach(diet=>{
@@ -1048,7 +1051,58 @@ function aplicarMacroOverride(){
     });
   }catch(e){console.error('Error aplicando cuadro macro guardado:',e);}
 }
-aplicarMacroOverride();
+// Al arrancar, usamos lo último guardado en este navegador como primer pantallazo
+// (por si no hay conexión todavía) — en cuanto llegue el estado de Firestore en
+// iniciarSync(), ese es el que manda (es el compartido por todo el equipo).
+try{
+  const _localOv = JSON.parse(localStorage.getItem('SA_MACRO_OVERRIDE')||'null');
+  if(_localOv){ macroOverride = _localOv; aplicarMacroOverride(macroOverride); }
+}catch(e){}
+
+function formatearFechaHistorial(iso){
+  try{
+    const d = new Date(iso);
+    return d.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit'}) + ' ' + d.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
+  }catch(e){ return iso||''; }
+}
+
+function renderMacroHistorial(){
+  const el = document.getElementById('macroHistorialBox');
+  if(!el) return;
+  if(!macroHistorial || !macroHistorial.length){
+    el.innerHTML = '<div style="font-size:11px;color:var(--gris);font-style:italic">Todavía no hay versiones anteriores guardadas — cada vez que subas un cuadro macro nuevo, la versión que estaba activa queda guardada acá por si hay que volver atrás.</div>';
+    return;
+  }
+  el.innerHTML = '<div style="font-size:11.5px;font-weight:600;color:var(--gris);margin-bottom:6px">↺ Versiones anteriores del cuadro macro</div>' +
+    macroHistorial.map((h,idx)=>`
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 10px;border:1px solid var(--borde);border-radius:6px;margin-bottom:5px;font-size:12px;background:var(--blanco)">
+        <span>${formatearFechaHistorial(h.ts)} — ${(h.nombreArchivo||'archivo sin nombre').replace(/</g,'&lt;')}</span>
+        <button class="btn btn-s" style="font-size:11px;padding:3px 9px" onclick="volverAVersionMacro(${idx})">↺ Volver a esta versión</button>
+      </div>`).join('');
+}
+
+// Guarda la versión activa en el historial (para poder volver) y la reemplaza por otra.
+// Se usa tanto al subir un cuadro macro nuevo como al elegir "volver a esta versión".
+function _archivarVersionMacroActiva(){
+  if(!macroOverride) return;
+  macroHistorial = [{ ts: new Date().toISOString(), nombreArchivo: macroOverrideNombreArchivo||'versión sin nombre', override: macroOverride }, ...(macroHistorial||[])].slice(0,5);
+}
+
+function volverAVersionMacro(idx){
+  const entry = (macroHistorial||[])[idx];
+  if(!entry) return;
+  if(!confirm(`¿Volver a la versión del cuadro macro del ${formatearFechaHistorial(entry.ts)} (${entry.nombreArchivo})? Se aplica para todo el equipo.`)) return;
+  _archivarVersionMacroActiva();
+  macroOverride = entry.override;
+  macroOverrideNombreArchivo = entry.nombreArchivo;
+  try{ localStorage.setItem('SA_MACRO_OVERRIDE', JSON.stringify(macroOverride)); }catch(e){}
+  aplicarMacroOverride(macroOverride);
+  guardarEstado();
+  renderGrilla();
+  actualizarInfoMacroOverride();
+  renderMacroHistorial();
+  mostrarNotif('✓ Cuadro macro restaurado a esa versión — sincronizado para todo el equipo');
+}
 
 
 // ════════════════════════════════════════════
@@ -1248,7 +1302,7 @@ let _firebaseListo = false;
 
 function guardarEstado() {
   _pendingWrites++;
-  ESTADO_REF.set({ items, mermas, proveedores, plantillas, cronOverrides, semanaInicio })
+  ESTADO_REF.set({ items, mermas, proveedores, plantillas, cronOverrides, semanaInicio, macroOverride, macroOverrideNombreArchivo, macroHistorial })
     .catch(e=>{ console.error('Error guardando en Firebase:', e); mostrarNotif('No se pudo guardar — revisá tu conexión a internet','warn'); })
     .finally(()=>{ _pendingWrites=Math.max(0,_pendingWrites-1); });
 }
@@ -1272,6 +1326,21 @@ function iniciarSync() {
       proveedores = s.proveedores || [];
       plantillas = s.plantillas || [];
       cronOverrides = s.cronOverrides || {};
+      // El cuadro macro que haya subido cualquiera del equipo manda sobre lo que
+      // hubiera quedado guardado sólo en este navegador (localStorage).
+      if ('macroOverride' in s) {
+        macroOverride = s.macroOverride || null;
+        macroOverrideNombreArchivo = s.macroOverrideNombreArchivo || '';
+        macroHistorial = s.macroHistorial || [];
+        if (macroOverride) {
+          aplicarMacroOverride(macroOverride);
+          try{ localStorage.setItem('SA_MACRO_OVERRIDE', JSON.stringify(macroOverride)); }catch(e){}
+        } else {
+          try{ localStorage.removeItem('SA_MACRO_OVERRIDE'); }catch(e){}
+        }
+        actualizarInfoMacroOverride();
+        renderMacroHistorial();
+      }
       const lunesActual = mondayActual();
       const semanaGuardada = s.semanaInicio || lunesActual;
       // Si la semana guardada quedó atrasada (de una semana anterior), la actualizamos
@@ -3134,10 +3203,18 @@ async function procesarCuadroMacro(input){
       input.value=''; return;
     }
 
-    // Guardar y aplicar
-    localStorage.setItem('SA_MACRO_OVERRIDE', JSON.stringify(nuevo));
-    aplicarMacroOverride();
+    // Guardar y aplicar — se sincroniza por Firestore para que lo vea todo el equipo,
+    // no sólo este navegador (localStorage queda como caché/respaldo local). La versión
+    // que estaba activa hasta ahora se archiva en el historial por si hay que volver atrás.
+    _archivarVersionMacroActiva();
+    macroOverride = nuevo;
+    macroOverrideNombreArchivo = file.name;
+    try{ localStorage.setItem('SA_MACRO_OVERRIDE', JSON.stringify(macroOverride)); }catch(e){}
+    aplicarMacroOverride(macroOverride);
+    guardarEstado();
     if(typeof previewMacro==='function') previewMacro();
+    if(typeof renderGrilla==='function') renderGrilla();
+    renderMacroHistorial();
 
     const resumenSrv = Object.entries(nuevo).map(([srv,diets])=>{
       const cantDias = Object.values(diets).reduce((acc,d)=>acc+Object.keys(d).length,0);
@@ -3146,12 +3223,15 @@ async function procesarCuadroMacro(input){
 
     const ignoradasArr = [...filasIgnoradas];
     log.innerHTML = `✓ Cuadro macro actualizado correctamente.<br>${resumenSrv}` +
-      (ignoradasArr.length ? `<br><br><details style="color:var(--gris)"><summary>Filas no reconocidas / ignoradas (${ignoradasArr.length})</summary>${ignoradasArr.map(f=>'• '+f).join('<br>')}</details>` : '');
+      (ignoradasArr.length ? `<br><br><span style="color:var(--amarillo-txt)">⚠ ${ignoradasArr.length} fila(s) del Word no se reconocieron y NO se cargaron — si son una dieta o categoría nueva, avisá para agregarla al sistema:</span><details style="color:var(--gris)"><summary>Ver filas no reconocidas</summary>${ignoradasArr.map(f=>'• '+f).join('<br>')}</details>` : '');
 
-    document.getElementById('macroOverrideInfo').innerHTML =
-      `<div style="font-size:11px;color:var(--gris)">📌 Hay un cuadro macro personalizado guardado en este navegador. Usá "Restaurar cuadro macro original" abajo para volver al de fábrica.</div>`;
+    actualizarInfoMacroOverride();
 
-    mostrarNotif('✓ Cuadro macro actualizado desde el Word');
+    if(ignoradasArr.length){
+      mostrarNotif(`✓ Cuadro macro actualizado, pero ${ignoradasArr.length} fila(s) no se reconocieron — revisá el detalle abajo`, 'warn');
+    } else {
+      mostrarNotif('✓ Cuadro macro actualizado desde el Word — ya se sincronizó para todo el equipo');
+    }
   }catch(err){
     console.error(err);
     log.innerHTML = `<span style="color:var(--rojo)">⚠ Error al procesar el archivo: ${err.message}</span>`;
@@ -3159,15 +3239,16 @@ async function procesarCuadroMacro(input){
   input.value='';
 }
 
-// Mostrar aviso si ya hay un cuadro macro personalizado guardado, al entrar a la pestaña
-(function(){
-  if(localStorage.getItem('SA_MACRO_OVERRIDE')){
-    document.addEventListener('DOMContentLoaded',()=>{
-      const el=document.getElementById('macroOverrideInfo');
-      if(el) el.innerHTML = `<div style="font-size:11px;color:var(--gris)">📌 Hay un cuadro macro personalizado guardado en este navegador. Usá "Restaurar cuadro macro original" abajo para volver al de fábrica.</div>`;
-    });
-  }
-})();
+// Aviso de "hay un cuadro macro personalizado cargado" — se llama al iniciar, tras subir
+// un Word nuevo, y cada vez que llega una actualización de otro integrante del equipo.
+function actualizarInfoMacroOverride(){
+  const el=document.getElementById('macroOverrideInfo');
+  if(!el) return;
+  el.innerHTML = macroOverride
+    ? `<div style="font-size:11px;color:var(--gris)">📌 Hay un cuadro macro personalizado cargado (${(macroOverrideNombreArchivo||'').replace(/</g,'&lt;')}), sincronizado para todo el equipo. Si hace falta volver a una versión anterior, usá la lista de abajo.</div>`
+    : '';
+}
+document.addEventListener('DOMContentLoaded', ()=>{ actualizarInfoMacroOverride(); renderMacroHistorial(); });
 
 
 // ─── Clonar recetas entre sedes ───
